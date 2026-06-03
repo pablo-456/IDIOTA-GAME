@@ -1,0 +1,332 @@
+/* ═══════════════════════════════════════════════════════
+   Game.css — Mesa de juego
+   ═══════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap');
+
+:root {
+  --gold:         #c9a84c;
+  --gold-light:   #e8cc7a;
+  --gold-dim:     #8a6f2e;
+  --felt:         #0d1f0f;
+  --felt-mid:     #122818;
+  --felt-light:   #1a3820;
+  --felt-table:   #0f2410;
+  --ink:          #080f09;
+  --cream:        #f5ead8;
+  --cream-dim:    #b8a98a;
+  --red-suit:     #c0392b;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body:    'Crimson Pro', Georgia, serif;
+}
+
+/* ── Layout raíz de la pantalla de juego ── */
+.game {
+  min-height: 100vh;
+  background-color: var(--felt-table);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+/* ══════════════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════════════ */
+.game__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: rgba(0,0,0,0.5);
+  border-bottom: 1px solid rgba(201,168,76,0.2);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.game__topbar-left,
+.game__topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.game__logo {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: var(--gold-light);
+}
+
+.game__room-code {
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: var(--gold-dim);
+}
+
+.game__phase-badge {
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 20px;
+  padding: 0.35rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--cream-dim);
+  font-style: italic;
+  letter-spacing: 0.04em;
+}
+
+.game__deck-info {
+  font-size: 0.82rem;
+  color: var(--gold-dim);
+}
+
+/* ══════════════════════════════════════════════
+   MAIN — grid de tres zonas
+══════════════════════════════════════════════ */
+.game__main {
+  flex: 1;
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  grid-template-areas:
+    "board"
+    "opponents"
+    "hand";
+  gap: 0;
+  min-height: 0;
+}
+
+/* ── Zona de la mesa ── */
+.game__board-zone {
+  grid-area: board;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+}
+
+.game__board-placeholder {
+  width: 100%;
+  max-width: 480px;
+}
+
+.game__board-felt {
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 50%, #1a3a1a 0%, var(--felt-table) 100%);
+  border: 2px solid rgba(201,168,76,0.15);
+  border-radius: 50% / 30%;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 0 60px rgba(0,0,0,0.5),
+    0 8px 40px rgba(0,0,0,0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Patrón sutil de feltro */
+.game__board-felt::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(255,255,255,0.015) 1px,
+    transparent 0
+  );
+  background-size: 8px 8px;
+  pointer-events: none;
+}
+
+.game__board-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.game__board-icon {
+  font-size: 3.5rem;
+  color: rgba(201,168,76,0.12);
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+.game__board-label {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: rgba(201,168,76,0.3);
+  margin: 0;
+  letter-spacing: 0.1em;
+}
+
+.game__board-sublabel {
+  font-style: italic;
+  font-size: 0.82rem;
+  color: rgba(201,168,76,0.2);
+  margin: 0;
+}
+
+/* ── Zona de rivales ── */
+.game__opponents-zone {
+  grid-area: opponents;
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid rgba(201,168,76,0.08);
+}
+
+.game__opponents-placeholder {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.game__opponent-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(201,168,76,0.1);
+  border-radius: 100px;
+  padding: 0.35rem 0.75rem 0.35rem 0.4rem;
+}
+
+.game__opp-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.game__opp-name {
+  font-size: 0.88rem;
+  color: var(--cream-dim);
+}
+
+.game__opp-cards {
+  font-size: 0.75rem;
+  color: var(--gold-dim);
+  border-left: 1px solid rgba(201,168,76,0.15);
+  padding-left: 0.5rem;
+  margin-left: 0.1rem;
+}
+
+/* ── Zona de mano del jugador local ── */
+.game__hand-zone {
+  grid-area: hand;
+  padding: 1rem 1.5rem 1.5rem;
+  border-top: 1px solid rgba(201,168,76,0.12);
+  background: rgba(0,0,0,0.3);
+}
+
+.game__hand-placeholder {
+  border: 1px dashed rgba(201,168,76,0.15);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.game__hand-placeholder--active {
+  border-color: rgba(201,168,76,0.4);
+  background: rgba(201,168,76,0.04);
+  box-shadow: 0 0 20px rgba(201,168,76,0.08);
+  animation: turn-pulse 2s ease-in-out infinite;
+}
+
+@keyframes turn-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(201,168,76,0.08); }
+  50%       { box-shadow: 0 0 30px rgba(201,168,76,0.18); }
+}
+
+.game__hand-label {
+  font-style: italic;
+  color: var(--cream-dim);
+  font-size: 0.95rem;
+  margin: 0 0 1rem;
+}
+
+/* ── Configuración de cartas en SETUP ── */
+.game__setup-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.game__setup-cards {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.game__setup-card {
+  width: 54px;
+  height: 78px;
+  background: linear-gradient(160deg, #fff 0%, #f5ead8 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #1a1a1a;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  cursor: default;
+  animation: card-deal 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--ci, 0) * 80ms);
+  transition: transform 0.2s;
+  position: relative;
+}
+
+.game__setup-card:hover { transform: translateY(-6px); }
+
+.game__setup-card--empty {
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(201,168,76,0.2);
+  color: rgba(201,168,76,0.2);
+}
+
+.game__setup-suit { font-size: 1rem; }
+
+.red { color: var(--red-suit); }
+
+@keyframes card-deal {
+  from { opacity: 0; transform: translateY(20px) rotate(5deg); }
+  to   { opacity: 1; transform: translateY(0) rotate(0); }
+}
+
+.game__setup-text {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #3a4a3b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .game__topbar { padding: 0.6rem 1rem; }
+  .game__board-zone { padding: 1rem; }
+  .game__hand-zone { padding: 0.75rem 1rem 1rem; }
+}

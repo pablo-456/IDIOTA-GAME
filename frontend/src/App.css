@@ -1,0 +1,105 @@
+/* ═══════════════════════════════════════════════════════
+   App.css — Reset global y contenedor raíz
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Reset moderno ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  background: #080f09;
+  color: #f5ead8;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Scrollbar con estética oscura */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #080f09; }
+::-webkit-scrollbar-thumb {
+  background: #2a3a2b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: #3a5a3b; }
+
+/* ── Contenedor raíz de la app ── */
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ── Contenedor de pantalla con fade de entrada ── */
+.app__screen {
+  flex: 1;
+  animation: screen-fade-in 0.4s ease both;
+}
+
+@keyframes screen-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Banner de error del servidor ── */
+.app__error-banner {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2d0c0c;
+  border: 1px solid #c0392b;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.95rem;
+  color: #e57373;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  animation: banner-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  max-width: 90vw;
+  white-space: nowrap;
+}
+
+@keyframes banner-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.app__error-banner button {
+  background: none;
+  border: none;
+  color: #e57373;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.1rem 0.25rem;
+  border-radius: 4px;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.app__error-banner button:hover { background: rgba(192, 57, 43, 0.2); }
+
+/* ── Utilidades globales ── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
