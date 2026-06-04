@@ -48,6 +48,13 @@
  *   • 8 cartas para elegir              — de ellas escoge:
  *       → 4 como cartasVisibles (todos las ven)
  *       → 4 como manoPrivada    (solo él las ve)
+ *
+ * ─── REGLA DE RECOGIDA ───────────────────────────────────────────────────────
+ *
+ *   • Cuando un jugador recoge la mesa (voluntaria o forzosamente), las cartas
+ *     de la pila pasan a su manoPrivada y la mesa queda vacía.
+ *   • El turno NO avanza: el jugador que recogió abre la nueva ronda y puede
+ *     jugar cualquier carta (pila vacía).
  */
 
 const Deck = require('./Deck');
@@ -109,9 +116,16 @@ class Game {
 
     /**
      * @type {string|null}
-     * socket.id del jugador ganador (solo relevante en estado FINISHED).
+     * socket.id del jugador perdedor — el último en quedarse con cartas (el "idiota").
+     * Solo relevante en estado FINISHED.
      */
-    this.winnerId = null;
+    this.loserId = null;
+
+    /**
+     * @type {{ id: string, username: string, savedAt: number }[]}
+     * Jugadores que ya se quedaron sin cartas (salvados), en orden de salida.
+     */
+    this.savedPlayers = [];
 
     // El host es el primer jugador en unirse
     this._addPlayerObject(hostId, hostName);
@@ -128,10 +142,16 @@ class Game {
   /**
    * Power máximo visible en la pila (para validar jugadas).
    * Si la pila está vacía devuelve 0 → cualquier carta puede jugarse.
+   * Si la última carta jugada es un '2' (reset), devuelve 0 también.
    */
   get pileTopPower() {
     if (this.pile.length === 0) return 0;
-    return Math.max(...this.pile.map((c) => c.power));
+    
+    const top = this.pile[this.pile.length - 1];
+    if (top.value === '2') return 0; // El 2 resetea el poder requerido a 0
+    
+    // Retorna únicamente el poder de la carta que quedó arriba del todo
+    return top.power ?? 0; 
   }
 
   // ─── Gestión de jugadores ────────────────────────────────────────────────
@@ -149,7 +169,8 @@ class Game {
       manoPrivada:    [],
       cartasVisibles: [],
       cartasOcultas:  [],
-      isReady:        false,   // true cuando confirma su elección en SETUP
+      isReady:        false,
+      isSaved:        false,
     });
   }
 
@@ -178,7 +199,7 @@ class Game {
   /**
    * Elimina a un jugador de la partida (desconexión).
    * • Si la partida está en PLAYING y era su turno, avanza al siguiente jugador.
-   * • Si quedan < 3 jugadores activos durante PLAYING, finaliza la partida.
+   * • Si quedan < 2 jugadores activos durante PLAYING, finaliza la partida.
    *
    * @param {string} playerId - socket.id del jugador que se va
    * @returns {{ success: boolean, advanceTurn: boolean }}
@@ -193,22 +214,19 @@ class Game {
     let advanceTurn = false;
 
     if (this.status === 'PLAYING') {
-      // Ajustar el índice del turno actual tras eliminar al jugador
       if (wasCurrentTurn) {
-        // El índice ya apunta al siguiente jugador (o se envuelve al inicio)
         if (this.currentTurnIndex >= this.players.length) {
           this.currentTurnIndex = 0;
         }
         advanceTurn = true;
       } else if (idx < this.currentTurnIndex) {
-        // El jugador eliminado estaba antes en la lista; ajustamos índice
         this.currentTurnIndex = Math.max(0, this.currentTurnIndex - 1);
       }
 
-      // Si quedan menos de 3 jugadores activos, no tiene sentido continuar
-      if (this.players.length < 2) {
-        this.status = 'FINISHED';
-        this.winnerId = this.players[0]?.id ?? null;
+      if (this.players.filter(p => !p.isSaved).length < 2) {
+        this.status  = 'FINISHED';
+        const lastActive = this.players.find(p => !p.isSaved);
+        this.loserId = lastActive?.id ?? null;
       }
     }
 
@@ -224,9 +242,6 @@ class Game {
    *   • 4 cartas ocultas   (cartasOcultas)
    *   • 8 cartas de elección → el jugador elegirá 4 visibles y 4 para mano
    *
-   * Las 8 cartas de elección se devuelven en manoPrivada temporalmente;
-   * el cliente mostrará estas cartas para que el jugador divida su elección.
-   *
    * @returns {{ success: boolean, error?: string, players?: PlayerState[] }}
    */
   iniciarConfiguracion() {
@@ -237,21 +252,14 @@ class Game {
       return { success: false, error: `Se necesitan al menos 3 jugadores. Hay ${this.players.length}.` };
     }
 
-    // Cartas necesarias: (4 ocultas + 8 de elección) × n jugadores
     const cartasNecesarias = this.players.length * 12;
     if (this.deck.remaining < cartasNecesarias) {
       return { success: false, error: 'No hay suficientes cartas en el mazo.' };
     }
 
     for (const player of this.players) {
-      // 4 cartas ocultas — el jugador NO las ve hasta que agota mano y visibles
       player.cartasOcultas  = this.deck.draw(4);
-
-      // 8 cartas para la fase de elección — se almacenan en manoPrivada temporalmente.
-      // El cliente presentará estas 8 cartas y el jugador escogerá:
-      //   → 4 a cartasVisibles (todos las verán durante la partida)
-      //   → 4 se quedan en manoPrivada (su mano real de inicio)
-      player.manoPrivada    = this.deck.draw(8);
+      player.manoPrivada    = this.deck.draw(8); // pool temporal de elección
       player.cartasVisibles = [];
       player.isReady        = false;
     }
@@ -262,15 +270,16 @@ class Game {
 
   /**
    * Confirma la elección de cartas de un jugador durante la fase SETUP.
-   * Cuando el 100 % de los jugadores estén listos, el estado pasa a 'PLAYING'
-   * y se elige un primer jugador al azar.
+   * El jugador envía los IDs de las 4 cartas que quiere como visibles;
+   * las otras 4 del pool quedan automáticamente como manoPrivada.
    *
-   * @param {string}   playerId      - socket.id del jugador
-   * @param {string[]} idsVisibles   - IDs de las 4 cartas elegidas como visibles
-   * @param {string[]} idsMano       - IDs de las 4 cartas que forman la mano privada
+   * Cuando el 100 % de los jugadores estén listos, el estado pasa a 'PLAYING'.
+   *
+   * @param {string}   playerId    - socket.id del jugador
+   * @param {string[]} idsVisibles - IDs de las 4 cartas elegidas como visibles
    * @returns {{ success: boolean, error?: string, allReady?: boolean }}
    */
-  confirmarEleccion(playerId, idsVisibles, idsMano) {
+  confirmarEleccion(playerId, idsVisibles) {
     if (this.status !== 'SETUP') {
       return { success: false, error: 'No estamos en fase de configuración.' };
     }
@@ -279,30 +288,27 @@ class Game {
     if (!player) return { success: false, error: 'Jugador no encontrado.' };
     if (player.isReady) return { success: false, error: 'Ya confirmaste tu elección.' };
 
-    if (idsVisibles.length !== 4 || idsMano.length !== 4) {
-      return { success: false, error: 'Debes elegir exactamente 4 cartas visibles y 4 para la mano.' };
+    if (!Array.isArray(idsVisibles) || idsVisibles.length !== 4) {
+      return { success: false, error: 'Debes elegir exactamente 4 cartas visibles.' };
     }
 
-    // Las 8 cartas de elección están en manoPrivada durante el SETUP
-    const pool = player.manoPrivada;
-    const allIds = new Set([...idsVisibles, ...idsMano]);
+    const pool = player.manoPrivada; // las 8 cartas de elección
+    const uniqueIds = new Set(idsVisibles);
 
-    // Validar que los 8 IDs sean únicos y pertenezcan al pool de elección
-    if (allIds.size !== 8) {
-      return { success: false, error: 'Los IDs de cartas no son únicos.' };
+    if (uniqueIds.size !== 4) {
+      return { success: false, error: 'Los IDs de cartas visibles no son únicos.' };
     }
-    for (const id of allIds) {
+    for (const id of uniqueIds) {
       if (!pool.some((c) => c.id === id)) {
         return { success: false, error: `La carta ${id} no pertenece a tu pool de elección.` };
       }
     }
 
-    // Asignar cartas a su lugar definitivo
-    player.cartasVisibles = pool.filter((c) => idsVisibles.includes(c.id));
-    player.manoPrivada    = pool.filter((c) => idsMano.includes(c.id));
+    // Asignar: las 4 elegidas son visibles, las otras 4 quedan en mano privada
+    player.cartasVisibles = pool.filter((c) =>  uniqueIds.has(c.id));
+    player.manoPrivada    = pool.filter((c) => !uniqueIds.has(c.id));
     player.isReady        = true;
 
-    // Verificar si todos los jugadores están listos
     const allReady = this.players.every((p) => p.isReady);
     if (allReady) {
       this._iniciarPartida();
@@ -317,51 +323,263 @@ class Game {
    * @private
    */
   _iniciarPartida() {
-    this.status = 'PLAYING';
+    this.status           = 'PLAYING';
     this.currentTurnIndex = Math.floor(Math.random() * this.players.length);
+  }
+
+  // ─── Lógica de Juego ─────────────────────────────────────────────────────
+
+  /**
+   * Determina la zona activa desde la que el jugador puede jugar cartas.
+   * Prioridad: manoPrivada → cartasVisibles → cartasOcultas
+   *
+   * @param {object} player
+   * @returns {'manoPrivada'|'cartasVisibles'|'cartasOcultas'|null}
+   */
+  _getActiveZone(player) {
+    if (player.manoPrivada.length    > 0) return 'manoPrivada';
+    if (player.cartasVisibles.length > 0) return 'cartasVisibles';
+    if (player.cartasOcultas.length  > 0) return 'cartasOcultas';
+    return null; // sin cartas → ganó
+  }
+
+  /**
+   * Procesa la jugada del turno activo.
+   *
+   * El jugador puede jugar una o más cartas DEL MISMO valor.
+   * Reglas:
+   *   • Valor '2'   → reset: se puede jugar sobre cualquier carta; la pila
+   *                   sigue pero el poder efectivo baja a 0.
+   *   • Valor '8'   → burn: quema la pila y da turno extra.
+   *   • Valor 'J'   → Joker: quema la pila y da turno extra.
+   *   • Cuatro iguales acumuladas en la pila → queman y dan turno extra.
+   *   • En todos los demás casos, las cartas deben tener power ≥ pileTopPower.
+   *
+   * Después de jugar:
+   *   1. El jugador roba del mazo hasta tener 4 cartas en mano (si el mazo tiene).
+   *   2. Se comprueba si ganó.
+   *   3. Si no ganó y no hubo turno extra, el turno pasa al siguiente.
+   *
+   * @param {string}   playerId - socket.id del jugador activo
+   * @param {string[]} cardIds  - IDs de las cartas a jugar (mismo valor)
+   * @returns {{
+   *   success    : boolean,
+   *   error?     : string,
+   *   burned?    : boolean,   // la pila fue quemada
+   *   extraTurn? : boolean,   // el mismo jugador vuelve a jugar
+   *   won?       : boolean,   // el jugador ganó la partida
+   * }}
+   */
+  playTurn(playerId, cardIds) {
+    if (this.status !== 'PLAYING') {
+      return { success: false, error: 'La partida no está en curso.' };
+    }
+
+    const player = this.currentPlayer;
+    if (!player || player.id !== playerId) {
+      return { success: false, error: 'No es tu turno.' };
+    }
+    if (!Array.isArray(cardIds) || cardIds.length === 0) {
+      return { success: false, error: 'Debes jugar al menos una carta.' };
+    }
+
+    const zone = this._getActiveZone(player);
+    if (!zone) return { success: false, error: 'No tienes cartas para jugar.' };
+
+    const sourceCards = player[zone];
+    const uniqueCardIds = [...new Set(cardIds)];
+
+    // Localizar las cartas en la zona activa
+    const cardsToPlay = uniqueCardIds.map((id) => sourceCards.find((c) => c.id === id));
+    if (cardsToPlay.some((c) => !c)) {
+      return { success: false, error: 'Una o más cartas no están disponibles en tu zona activa.' };
+    }
+
+    // Validar que todas sean del mismo valor
+    const playValue = cardsToPlay[0].value;
+    if (cardsToPlay.some((c) => c.value !== playValue)) {
+      return { success: false, error: 'Todas las cartas jugadas deben tener el mismo valor.' };
+    }
+
+    //  CORREGIDO: Validando tanto el string 'JOKER' como el emoji por si acaso
+    const isBurn  = playValue === '8' || playValue === 'JOKER' || playValue === '🃏';
+    const isReset = playValue === '2';
+
+    // Validar poder (excepto para burns y resets, que siempre se pueden jugar)
+    if (!isBurn && !isReset) {
+      const cardPower = cardsToPlay[0].power;
+      if (cardPower < this.pileTopPower) {
+        
+        // INTERCEPCIÓN DEL AZAR: Si la carta viene de la zona oculta, el fallo es un evento legal del juego
+        if (zone === 'cartasOcultas') {
+          // 1. Removemos la carta de sus cartas ocultas
+          player[zone] = sourceCards.filter((c) => !uniqueCardIds.includes(c.id));
+
+          // 2. Añadimos la carta a la pila (para que se sume al castigo)
+          this.pile.push(...cardsToPlay);
+
+          // 3. Forzamos la recogida automática de toda la mesa a su mano privada
+          player.manoPrivada.push(...this.pile);
+          this.pile = [];
+
+          // REGLA: El turno NO avanza. El jugador inicia la nueva ronda con su mano privada recién obtenida.
+          return { success: true, burned: false, extraTurn: false, won: false, forcedPickUp: true };
+        }
+
+        // Para 'manoPrivada' o 'cartasVisibles', sigue siendo un movimiento inválido (error)
+        return {
+          success: false,
+          error: `No puedes jugar ${playValue} sobre una pila con poder ${this.pileTopPower}.`,
+        };
+      }
+    }
+
+    // Remover cartas de la zona activa del jugador
+    player[zone] = sourceCards.filter((c) => !uniqueCardIds.includes(c.id));
+
+    // Añadir cartas a la pila
+    this.pile.push(...cardsToPlay);
+
+    let burned    = false;
+    let extraTurn = false;
+
+    if (isBurn) {
+      // Quemar la pila
+      this.pile  = [];
+      burned     = true;
+      extraTurn  = true;
+    } 
+
+    // El jugador roba del mazo hasta completar 4 en manoPrivada
+    if (this.deck.remaining > 0 && player.manoPrivada.length < 4) {
+      const needed = 4 - player.manoPrivada.length;
+      const drawn  = this.deck.draw(Math.min(needed, this.deck.remaining));
+      player.manoPrivada.push(...drawn);
+    }
+
+    // Comprobar si el jugador se salvó (se quedó sin cartas)
+    const { saved, gameOver } = this.checkSaved(playerId);
+    if (saved) return { success: true, burned, extraTurn: false, saved: true, gameOver };
+
+    // Avanzar turno si no hay turno extra
+    if (!extraTurn) {
+      this.nextTurn();
+    }
+
+    return { success: true, burned, extraTurn, saved: false, gameOver: false };
+  }
+
+  /**
+   * El jugador recoge toda la pila de la mesa hacia su manoPrivada.
+   *
+   * REGLA CLAVE: El turno NO pasa al siguiente jugador. El jugador que recogió
+   * la mesa es quien abre la nueva ronda con la pila vacía, pudiendo jugar
+   * cualquier carta libremente.
+   *
+   * Puede ser voluntaria (el jugador elige recoger) o forzada (intentó jugar
+   * una carta que no puede, o en cartas ocultas sacó una mala carta).
+   *
+   * @param {string}  playerId  - socket.id del jugador activo
+   * @param {boolean} [voluntary=false] - true si el jugador eligió recoger
+   * @returns {{ success: boolean, error?: string, cardsPickedUp: number }}
+   */
+  pickUpPile(playerId, voluntary = false) {
+    if (this.status !== 'PLAYING') {
+      return { success: false, error: 'La partida no está en curso.' };
+    }
+
+    const player = this.currentPlayer;
+    if (!player || player.id !== playerId) {
+      return { success: false, error: 'No es tu turno.' };
+    }
+
+    const count = this.pile.length;
+
+    // Mover todas las cartas de la pila a la mano privada del jugador
+    player.manoPrivada.push(...this.pile);
+    this.pile = [];
+
+    // El turno NO avanza: el mismo jugador inicia la nueva ronda con mesa vacía.
+    // No llamamos a this.nextTurn()
+
+    return { success: true, cardsPickedUp: count, voluntary };
   }
 
   // ─── Utilidades de turno ─────────────────────────────────────────────────
 
   /**
-   * Avanza el turno al siguiente jugador en la lista (circular).
-   * Se usa externamente desde el servidor después de procesar una jugada.
+   * Avanza el turno al siguiente jugador activo (isSaved=false).
+   * Protección: si todos están salvados (no debería pasar), no cicla infinito.
    */
   nextTurn() {
     if (this.players.length === 0) return;
-    this.currentTurnIndex = (this.currentTurnIndex + 1) % this.players.length;
+
+    const total = this.players.length;
+    let attempts = 0;
+
+    do {
+      this.currentTurnIndex = (this.currentTurnIndex + 1) % total;
+      attempts++;
+    } while (
+      attempts < total &&
+      this.players[this.currentTurnIndex]?.isSaved
+    );
   }
 
   /**
-   * Verifica si un jugador ha ganado (sin cartas en ninguna zona).
-   * Si gana, cambia el estado a FINISHED.
+   * Verifica si un jugador se ha salvado (sin cartas en ninguna zona).
+   * Un jugador salvado sale de la rotación de turnos pero sigue viendo la partida.
+   * Si solo queda 1 jugador con cartas, ese es el "idiota" y la partida termina.
    *
    * @param {string} playerId
-   * @returns {boolean} true si ganó
+   * @returns {{ saved: boolean, gameOver: boolean }}
    */
-  checkWinner(playerId) {
+  checkSaved(playerId) {
     const player = this.players.find((p) => p.id === playerId);
-    if (!player) return false;
+    if (!player) return { saved: false, gameOver: false };
 
     const hasNoCards =
       player.manoPrivada.length    === 0 &&
       player.cartasVisibles.length === 0 &&
       player.cartasOcultas.length  === 0;
 
-    if (hasNoCards) {
-      this.status   = 'FINISHED';
-      this.winnerId = playerId;
-      return true;
+    if (!hasNoCards) return { saved: false, gameOver: false };
+
+    // Marcar al jugador como salvado
+    player.isSaved = true;
+    this.savedPlayers.push({ id: player.id, username: player.username, savedAt: this.savedPlayers.length + 1 });
+
+    // ¿Cuántos jugadores aún tienen cartas?
+    const activePlayers = this.players.filter((p) => !p.isSaved);
+
+    if (activePlayers.length <= 1) {
+      // El último con cartas es el idiota — la partida termina
+      this.status  = 'FINISHED';
+      this.loserId = activePlayers[0]?.id ?? null;
+      return { saved: true, gameOver: true };
     }
-    return false;
+
+    // La partida continúa — avanzar el turno al siguiente jugador activo.
+    // Hay que llamar nextTurn() aquí porque playTurn() retorna inmediatamente
+    // tras detectar el salvado, sin pasar por el nextTurn() normal.
+    this.nextTurn();
+
+    return { saved: true, gameOver: false };
+  }
+
+  /**
+   * @deprecated Mantener compatibilidad — usar checkSaved()
+   */
+  checkWinner(playerId) {
+    const result = this.checkSaved(playerId);
+    return result.gameOver;
   }
 
   // ─── Serialización segura ────────────────────────────────────────────────
 
   /**
    * Genera una representación del estado del juego apta para enviar a TODOS
-   * los clientes (las manos privadas y ocultas se ocultan o se muestra solo
-   * el conteo).
+   * los clientes.
    *
    * @returns {object} Estado público de la partida
    */
@@ -373,26 +591,28 @@ class Game {
       pile:             this.pile,
       deckRemaining:    this.deck.remaining,
       winnerId:         this.winnerId,
+      loserId:          this.loserId,
+      savedPlayers:     this.savedPlayers,
       players: this.players.map((p) => ({
         id:                   p.id,
         username:             p.username,
         isReady:              p.isReady,
-        cartasVisibles:       p.cartasVisibles,           // visible para todos
-        manoPrivadaCount:     p.manoPrivada.length,       // solo el conteo
-        cartasOcultasCount:   p.cartasOcultas.length,     // solo el conteo
+        isSaved:              p.isSaved,
+        cartasVisibles:       p.cartasVisibles,
+        manoPrivadaCount:     p.manoPrivada.length,
+        cartasOcultasCount:   p.cartasOcultas.length,
       })),
     };
   }
 
   /**
-   * Genera la perspectiva privada de un jugador específico
-   * (incluye sus cartas privadas).
+   * Genera la perspectiva privada de un jugador específico.
    *
    * @param {string} playerId
    * @returns {object}
    */
   toPrivateState(playerId) {
-    const pub = this.toPublicState();
+    const pub    = this.toPublicState();
     const player = this.players.find((p) => p.id === playerId);
     if (!player) return pub;
 
@@ -401,7 +621,7 @@ class Game {
       myHand: {
         manoPrivada:    player.manoPrivada,
         cartasVisibles: player.cartasVisibles,
-        cartasOcultas:  player.cartasOcultas, // solo se revelan al jugarlas
+        cartasOcultas:  player.cartasOcultas,
       },
     };
   }

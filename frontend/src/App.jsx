@@ -154,6 +154,7 @@ export default function App() {
             gameState={gameState}
             myId={myId}
             roomId={roomId}
+            socket={socket}
           />
         )}
       </div>

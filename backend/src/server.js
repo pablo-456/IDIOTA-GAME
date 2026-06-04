@@ -10,9 +10,9 @@
  *   │ Evento                  │ Descripción                                    │
  *   ├─────────────────────────┼────────────────────────────────────────────────┤
  *   │ create_room             │ Crea sala y une al creador                     │
- *   │ join_room               │ Une a un jugador a sala existente               │
- *   │ player_ready_setup      │ Jugador confirma elección de cartas en SETUP    │
- *   │ disconnect              │ Maneja salida limpia (automático por Socket.io) │
+ *   │ join_room               │ Une a un jugador a sala existente              │
+ *   │ player_ready_setup      │ Jugador confirma elección de cartas en SETUP   │
+ *   │ disconnect              │ Maneja salida limpia (automático por Socket.io)│
  *   └─────────────────────────┴────────────────────────────────────────────────┘
  *
  *   Salientes (servidor → cliente):
@@ -21,12 +21,12 @@
  *   ├──────────────────────────┼───────────────────────────────────────────────┤
  *   │ room_created             │ Confirmación al creador con código de sala    │
  *   │ room_joined              │ Confirmación al jugador que se unió           │
- *   │ room_updated             │ Estado público actualizado a toda la sala      │
+ *   │ room_updated             │ Estado público actualizado a toda la sala     │
  *   │ setup_started            │ Inicia fase SETUP; cada jugador recibe su     │
- *   │                          │   estado privado (cartas de elección)          │
- *   │ game_started             │ Todos listos; comienza PLAYING                 │
- *   │ player_disconnected      │ Notifica salida de un jugador a la sala        │
- *   │ game_over                │ Notifica fin de partida con ganador            │
+ *   │                          │   estado privado (cartas de elección)         │
+ *   │ game_started             │ Todos listos; comienza PLAYING                │
+ *   │ player_disconnected      │ Notifica salida de un jugador a la sala       │
+ *   │ game_over                │ Notifica fin de partida con ganador           │
  *   │ error                    │ Mensaje de error al cliente que lo generó     │
  *   └──────────────────────────┴───────────────────────────────────────────────┘
  *
@@ -205,33 +205,40 @@ io.on('connection', (socket) => {
   //   • Se elige un jugador inicial al azar
   //   • Se emite 'game_started' a toda la sala
   // ─────────────────────────────────────────────────────────────────────────
-  socket.on('player_ready_setup', ({ roomId, idsVisibles, idsMano } = {}) => {
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // EVENTO: confirm_setup (Sincronizado perfectamente con tu Frontend)
+  // Payload esperado: { roomId: string, idsVisibles: string[] }
+  // ─────────────────────────────────────────────────────────────────────────
+  socket.on('confirm_setup', ({ roomId, idsVisibles } = {}) => {
     const game = roomController.getGame(roomId);
     if (!game) return emitError(socket, 'Sala no encontrada.');
     if (game.status !== 'SETUP') {
       return emitError(socket, 'El juego no está en fase de configuración.');
     }
 
-    // Validación básica de payload
-    if (!Array.isArray(idsVisibles) || !Array.isArray(idsMano)) {
-      return emitError(socket, 'Formato de elección inválido.');
+    // Validación básica de lo que envía el cliente
+    if (!Array.isArray(idsVisibles) || idsVisibles.length !== 4) {
+      return emitError(socket, 'Debes elegir exactamente 4 cartas visibles.');
     }
 
-    const result = game.confirmarEleccion(socket.id, idsVisibles, idsMano);
+    // El modelo lógico procesa la elección (y calcula la mano oculta internamente)
+    const result = game.confirmarEleccion(socket.id, idsVisibles);
     if (!result.success) {
       return emitError(socket, result.error);
     }
 
-    console.log(`[player_ready_setup] ${socket.id} listo en sala ${roomId}`);
+    console.log(`[confirm_setup] Jugador ${socket.id} listo en sala ${roomId}`);
 
-    // Actualizar estado público (muestra quién ya está listo)
+    // 1. Notificar a toda la sala para actualizar quién está "Listo"
     io.to(roomId).emit('room_updated', game.toPublicState());
 
-    // Si todos confirmaron → ¡empezamos!
+    // 2. Si TODOS están listos, el modelo cambia a 'PLAYING' automáticamente
     if (result.allReady) {
-      console.log(`[player_ready_setup] Todos listos en sala ${roomId} → PLAYING`);
+      console.log(`[confirm_setup] ¡Todos listos! Sala ${roomId} → PLAYING`);
 
-      // Enviar a cada jugador su estado privado inicial de la partida
+      // Enviamos a cada jugador su perspectiva privada e inicial de juego
       for (const player of game.players) {
         io.to(player.id).emit('game_started', {
           state:           game.toPrivateState(player.id),
@@ -242,7 +249,81 @@ io.on('connection', (socket) => {
       }
     }
   });
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // EVENTO: play_turn
+  // Payload esperado: { roomId: string, cardIds: string[] }
+  // ─────────────────────────────────────────────────────────────────────────
+  socket.on('play_turn', ({ roomId, cardIds } = {}) => {
+    const game = roomController.getGame(roomId);
+    if (!game) return emitError(socket, 'Sala no encontrada.');
 
+    // Ejecuta la jugada en el modelo lógico
+    const result = game.playTurn(socket.id, cardIds);
+    if (!result.success) {
+      return emitError(socket, result.error);
+    }
+
+    // El jugador se salvó (se quedó sin cartas)
+    if (result.saved) {
+      const savedPlayer = game.players.find((p) => p.id === socket.id);
+
+      // Notificar al jugador salvado con su mensaje especial
+      socket.emit('player_saved', {
+        message: '🎉 ¡Te salvaste! Ya no tienes cartas. Sigue viendo la partida…',
+        savedPlayers: game.savedPlayers,
+      });
+
+      // Si la partida terminó (queda 1 solo con cartas → es el idiota)
+      if (result.gameOver) {
+        const loser = game.players.find((p) => p.id === game.loserId);
+        io.to(roomId).emit('game_over', {
+          loserId:   game.loserId,
+          loserName: loser?.username ?? 'Desconocido',
+          savedPlayers: game.savedPlayers,
+          reason:    'El último jugador con cartas es el idiota.',
+        });
+        return;
+      }
+
+      // La partida continúa — notificar a todos del nuevo estado
+      for (const player of game.players) {
+        io.to(player.id).emit('game_started', {
+          state: game.toPrivateState(player.id),
+          savedPlayers: game.savedPlayers,
+        });
+      }
+      return;
+    }
+
+    // Jugada normal — sincronizar estado con todos
+    for (const player of game.players) {
+      io.to(player.id).emit('game_started', {
+        state: game.toPrivateState(player.id),
+      });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // EVENTO: pick_up_pile
+  // Payload esperado: { roomId: string, voluntary: boolean }
+  // ─────────────────────────────────────────────────────────────────────────
+  socket.on('pick_up_pile', ({ roomId, voluntary } = {}) => {
+    const game = roomController.getGame(roomId);
+    if (!game) return emitError(socket, 'Sala no encontrada.');
+
+    const result = game.pickUpPile(socket.id, voluntary);
+    if (!result.success) {
+      return emitError(socket, result.error);
+    }
+
+    // Sincronizar la mesa limpia y la nueva mano con todos los clientes
+    for (const player of game.players) {
+      io.to(player.id).emit('game_started', {
+        state: game.toPrivateState(player.id),
+      });
+    }
+  });
   // ─────────────────────────────────────────────────────────────────────────
   // EVENTO: disconnect (automático de Socket.io)
   //
@@ -278,13 +359,14 @@ io.on('connection', (socket) => {
       message:     'Un jugador se ha desconectado.',
     });
 
-    // Si la partida terminó por la desconexión (ej. quedaron < 2 jugadores)
+    // Si la partida terminó por la desconexión (ej. quedaron < 2 jugadores activos)
     if (game.status === 'FINISHED') {
-      const winner = game.players.find((p) => p.id === game.winnerId);
+      const loser = game.players.find((p) => p.id === game.loserId);
       io.to(roomId).emit('game_over', {
-        winnerId:   game.winnerId,
-        winnerName: winner?.username ?? 'Desconocido',
-        reason:     'Jugadores insuficientes para continuar.',
+        loserId:      game.loserId,
+        loserName:    loser?.username ?? 'Desconocido',
+        savedPlayers: game.savedPlayers ?? [],
+        reason:       'Jugadores insuficientes para continuar.',
       });
     }
   });
@@ -298,7 +380,7 @@ const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
   console.log(`\n╔══════════════════════════════════════╗`);
-  console.log(`║  🃏 Servidor IDIOTA en puerto ${PORT}    ║`);
+  console.log(`║  🃏 Servidor IDIOTA en puerto ${PORT}   ║`);
   console.log(`╚══════════════════════════════════════╝\n`);
 });
 
