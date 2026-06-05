@@ -171,11 +171,12 @@ class Game {
     this.players.push({
       id,
       username,
-      manoPrivada:    [],
-      cartasVisibles: [],
-      cartasOcultas:  [],
-      isReady:        false,
-      isSaved:        false,
+      manoPrivada:           [],
+      cartasVisibles:        [],
+      cartasVisiblesPublicas: [], // las 4 elegidas en SETUP — lo único que ven los rivales
+      cartasOcultas:         [],
+      isReady:               false,
+      isSaved:               false,
     });
   }
 
@@ -310,8 +311,9 @@ class Game {
     }
 
     // Asignar: las 4 elegidas son visibles, las otras 4 quedan en mano privada
-    player.cartasVisibles = pool.filter((c) =>  uniqueIds.has(c.id));
-    player.manoPrivada    = pool.filter((c) => !uniqueIds.has(c.id));
+    player.cartasVisibles         = pool.filter((c) =>  uniqueIds.has(c.id));
+    player.cartasVisiblesPublicas  = [...player.cartasVisibles]; // snapshot público — solo estas ven los rivales
+    player.manoPrivada            = pool.filter((c) => !uniqueIds.has(c.id));
     player.isReady        = true;
 
     const allReady = this.players.every((p) => p.isReady);
@@ -517,8 +519,15 @@ class Game {
 
     const count = this.pile.length;
 
-    // Mover todas las cartas de la pila a la mano privada del jugador
-    player.manoPrivada.push(...this.pile);
+    // Si el jugador ya está en fase de cartas visibles, las recogidas se suman
+    // a cartasVisibles (jugables junto a las demás) pero NO a cartasVisiblesPublicas,
+    // así los rivales nunca las ven. En cualquier otra fase van a manoPrivada.
+    const zone = this._getActiveZone(player);
+    if (zone === 'cartasVisibles') {
+      player.cartasVisibles.push(...this.pile);
+    } else {
+      player.manoPrivada.push(...this.pile);
+    }
     this.pile = [];
 
     // El turno NO avanza: el mismo jugador inicia la nueva ronda con mesa vacía.
@@ -542,8 +551,14 @@ class Game {
 
     const count = this.pile.length;
 
-    // Mover toda la pila (que ya incluye la carta revelada) a la mano del jugador
-    player.manoPrivada.push(...this.pile);
+    // Mismo criterio que pickUpPile: si está en fase visible, las recogidas
+    // van a cartasVisibles (no públicas); si no, a manoPrivada.
+    const zone = this._getActiveZone(player);
+    if (zone === 'cartasVisibles') {
+      player.cartasVisibles.push(...this.pile);
+    } else {
+      player.manoPrivada.push(...this.pile);
+    }
     this.pile = [];
 
     // Limpiar el estado pendiente
@@ -604,23 +619,6 @@ class Game {
     return { saved: true, gameOver: false };
   }
 
-  /**
-   * Ejecuta la recogida forzada pendiente tras revelar una carta oculta mala.
-   */
-  confirmForcedPickUp() {
-    const pending = this.pendingForcedPickUp;
-    if (!pending) return { success: false, error: 'No hay recogida forzada pendiente.' };
-
-    const player = this.players.find((p) => p.id === pending.playerId);
-    if (!player) return { success: false, error: 'Jugador no encontrado.' };
-
-    const count = this.pile.length;
-    player.manoPrivada.push(...this.pile);
-    this.pile = [];
-    this.pendingForcedPickUp = null;
-
-    return { success: true, cardsPickedUp: count };
-  }
 
   // ─── Serialización segura ────────────────────────────────────────────────
 
@@ -645,7 +643,7 @@ class Game {
         username:             p.username,
         isReady:              p.isReady,
         isSaved:              p.isSaved,
-        cartasVisibles:       p.cartasVisibles,
+        cartasVisibles:       p.cartasVisiblesPublicas, // rivales solo ven las 4 originales
         manoPrivadaCount:     p.manoPrivada.length,
         cartasOcultasCount:   p.cartasOcultas.length,
       })),

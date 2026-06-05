@@ -305,6 +305,13 @@ io.on('connection', (socket) => {
       // ¿La partida terminó? (queda 1 solo con cartas → el idiota)
       if (result.gameOver) {
         const loser = game.players.find((p) => p.id === game.loserId);
+
+        // Primero sincronizar estado (con loserId y savedPlayers actualizados)
+        // para que los clientes lo tengan ANTES de recibir game_over
+        for (const player of game.players) {
+          io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
+        }
+
         io.to(roomId).emit('game_over', {
           loserId:      game.loserId,
           loserName:    loser?.username ?? 'Desconocido',

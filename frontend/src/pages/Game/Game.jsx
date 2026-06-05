@@ -76,9 +76,11 @@ function Card({ card, selected, onClick, disabled, faceDown, dimmed, small }) {
 }
 
 /**
- * Renders the top card of the pile (or empty pile state).
+ * Renders the pile with an expandable view of all cards.
  */
 function PileDisplay({ pile }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (!pile || pile.length === 0) {
     return (
       <div className="pile pile--empty">
@@ -89,15 +91,40 @@ function PileDisplay({ pile }) {
   }
 
   const top = pile[pile.length - 1];
+
   return (
-    <div className="pile">
-      <div className="pile__count-badge">{pile.length}</div>
-      <Card card={top} disabled />
+    <div className="pile-wrap">
+      <div className="pile">
+        <div className="pile__count-badge">{pile.length}</div>
+        <Card card={top} disabled />
+        {pile.length > 1 && <div className="pile__shadow pile__shadow--1" />}
+        {pile.length > 2 && <div className="pile__shadow pile__shadow--2" />}
+      </div>
+
       {pile.length > 1 && (
-        <div className="pile__shadow pile__shadow--1" />
+        <button
+          className={`pile__view-btn${expanded ? ' pile__view-btn--open' : ''}`}
+          onClick={() => setExpanded(e => !e)}
+        >
+          {expanded ? '▲ Cerrar' : '👁 Ver cartas'}
+        </button>
       )}
-      {pile.length > 2 && (
-        <div className="pile__shadow pile__shadow--2" />
+
+      {expanded && (
+        <div className="pile__expanded">
+          <div className="pile__expanded-header">
+            <span>Cartas en mesa ({pile.length})</span>
+            <button className="pile__expanded-close" onClick={() => setExpanded(false)}>✕</button>
+          </div>
+          <div className="pile__expanded-cards">
+            {[...pile].reverse().map((card, i) => (
+              <div key={card.id} className="pile__expanded-entry">
+                <span className="pile__expanded-pos">#{pile.length - i}</span>
+                <Card card={card} small disabled />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -386,19 +413,12 @@ function PlayingPhase({ gameState, myId, socket, roomId }) {
         <div className="playing__hand-header">
           <span className="playing__hand-zone-label">
             {activeZone === 'manoPrivada'    && '🔒 Tu mano privada'}
-            {activeZone === 'cartasVisibles' && '👁 Tus cartas visibles'}
+            {activeZone === 'cartasVisibles' && `👁 Tus cartas visibles (${activeCards.length})`}
             {activeZone === 'cartasOcultas'  && '❓ Cartas ocultas (azar)'}
             {!activeZone && '— Sin cartas —'}
           </span>
-
-          {myHand?.cartasVisibles?.length > 0 && activeZone !== 'cartasVisibles' && (
-            <div className="playing__hand-visibles">
-              {myHand.cartasVisibles.map((c) => (
-                <Card key={c.id} card={c} small disabled dimmed />
-              ))}
-            </div>
-          )}
         </div>
+
 
         <div className="playing__hand-cards">
           {activeCards.map((card) => {
@@ -487,7 +507,7 @@ function CrownOverlay({ visible, loserName, amILoser, onDone }) {
   if (!visible) return null;
 
   return (
-    <div className="crown-overlay" onAnimationEnd={onDone}>
+    <div className="crown-overlay">
       <div className="crown-overlay__backdrop" />
       <div className="crown-overlay__stage">
         <div className="crown-overlay__crown">👑</div>
@@ -503,7 +523,10 @@ function CrownOverlay({ visible, loserName, amILoser, onDone }) {
           {amILoser ? '🤡 TÚ ERES EL IDIOTA' : '🤡 EL IDIOTA HA SIDO REVELADO'}
         </div>
         <div className="crown-overlay__timer">
-          <div className="crown-overlay__timer-bar" onAnimationEnd={onDone} />
+          <div
+            className="crown-overlay__timer-bar"
+            onAnimationEnd={(e) => { if (e.target === e.currentTarget) onDone(); }}
+          />
         </div>
       </div>
     </div>
@@ -683,6 +706,8 @@ export default function Game({ gameState, myId, roomId, socket }) {
   // ── Animación de coronación del idiota antes de mostrar FINISHED ─────────────
   const [showCrown, setShowCrown]         = useState(false);
   const [crownDone, setCrownDone]         = useState(false);
+  // ── Datos del game_over recibidos por evento (fuente de verdad para loserId) ──
+  const [gameOverData, setGameOverData]   = useState(null);
 
   // Escuchar evento personal player_saved del servidor
   useState(() => {
@@ -722,12 +747,23 @@ export default function Game({ gameState, myId, roomId, socket }) {
     return () => socket.off('special_play', handler);
   });
 
+  // Escuchar game_over — fuente de verdad para saber quién es el idiota
+  useState(() => {
+    if (!socket) return;
+    const handler = (data) => {
+      setGameOverData(data);
+    };
+    socket.on('game_over', handler);
+    return () => socket.off('game_over', handler);
+  });
+
   // ── Pantalla FINISHED ──────────────────────────────────────────────────────
-  const loserId   = gameState?.loserId ?? null;
-  const loserName = gameState?.players?.find(p => p.id === loserId)?.username
-                    ?? gameState?.loserName
+  // Usar gameOverData como fuente de verdad (llega por evento game_over)
+  // y gameState como fallback (lo tiene tras el game_started que precede al game_over)
+  const loserId   = gameOverData?.loserId ?? gameState?.loserId ?? null;
+  const loserName = gameOverData?.loserName
+                    ?? gameState?.players?.find(p => p.id === loserId)?.username
                     ?? null;
-  // amILoser solo es true si loserId está definido Y coincide con myId
   const amILoser  = !!loserId && loserId === myId;
   const amISavedFinished = !!loserId && loserId !== myId;
 
