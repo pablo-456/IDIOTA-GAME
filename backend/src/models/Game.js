@@ -482,10 +482,13 @@ class Game {
       this.nextTurn();
     }
 
-    // Si la carta vino de cartasOcultas y fue buena, informarlo para el reveal
+    // Carta oculta buena → revelar a todos
     const revealedCard = (zone === 'cartasOcultas') ? cardsToPlay[0] : null;
 
-    return { success: true, burned, extraTurn, saved: false, gameOver: false, revealedCard };
+    // isBurn ya indica si es 8 o Joker; reutilizamos esa variable (playValue ya está declarada arriba)
+    const isSpecialPlay = isBurn && zone !== 'cartasOcultas';
+
+    return { success: true, burned, extraTurn, saved: false, gameOver: false, revealedCard, isSpecialPlay, specialCard: isSpecialPlay ? cardsToPlay[0] : null };
   }
 
   /**
@@ -590,6 +593,7 @@ class Game {
 
     if (activePlayers.length <= 1) {
       this.status  = 'FINISHED';
+      // El último activo es el idiota — NO se agrega a savedPlayers
       this.loserId = activePlayers[0]?.id ?? null;
       return { saved: true, gameOver: true };
     }

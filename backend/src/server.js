@@ -326,14 +326,38 @@ io.on('connection', (socket) => {
     }
 
     // ── Jugada normal ──
-    // Si fue carta oculta buena, revelarla a todos antes de sincronizar
+    const actor = game.players.find((p) => p.id === socket.id);
+
+    // Carta oculta buena → reveal a todos
     if (result.revealedCard) {
-      const revealer = game.players.find((p) => p.id === socket.id);
+      const rc = result.revealedCard;
+      const isSpecialFromAzar = rc.value === '8' || rc.value === '🃏' || rc.value === 'JOKER';
+
       io.to(roomId).emit('card_revealed', {
         playerId:    socket.id,
-        playerName:  revealer?.username ?? 'Alguien',
-        card:        result.revealedCard,
+        playerName:  actor?.username ?? 'Alguien',
+        card:        rc,
         mustPickUp:  false,
+      });
+
+      // Si además era 8 o Joker, emitir también la animación dorada
+      if (isSpecialFromAzar) {
+        io.to(roomId).emit('special_play', {
+          playerId:   socket.id,
+          playerName: actor?.username ?? 'Alguien',
+          card:       rc,
+          burned:     result.burned,
+        });
+      }
+    }
+
+    // 8 o Joker jugado desde mano/visibles → anuncio especial dorado
+    if (result.isSpecialPlay) {
+      io.to(roomId).emit('special_play', {
+        playerId:   socket.id,
+        playerName: actor?.username ?? 'Alguien',
+        card:       result.specialCard,
+        burned:     result.burned,
       });
     }
 
@@ -422,4 +446,4 @@ server.listen(PORT, () => {
   console.log(`╚══════════════════════════════════════╝\n`);
 });
 
-module.exports = { app, server, io }; 
+module.exports = { app, server, io };

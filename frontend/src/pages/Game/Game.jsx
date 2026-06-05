@@ -435,6 +435,81 @@ function PlayingPhase({ gameState, myId, socket, roomId }) {
   );
 }
 
+// ─── Overlay de jugada especial (8 / Joker) ────────────────────────────────
+
+function SpecialPlayOverlay({ event, myId }) {
+  if (!event) return null;
+  const { playerId, playerName, card, burned } = event;
+  const isMe   = playerId === myId;
+  const isJoker = card.value === '🃏' || card.value === 'JOKER';
+
+  return (
+    <div className="special-overlay">
+      <div className="special-overlay__backdrop" />
+      <div className="special-overlay__stage">
+        <div className="special-overlay__particles">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <span key={i} className="special-overlay__particle" style={{ '--i': i }} />
+          ))}
+        </div>
+
+        <div className="special-overlay__card-wrap">
+          <div className={'card special-overlay__card' + (isJoker ? ' card--joker' : ' card--special')}>
+            {isJoker ? (
+              <span className="card__joker-icon">🃏</span>
+            ) : (
+              <>
+                <span className="card__value-tl">{card.value}</span>
+                <span className="card__suit-center">{card.suit}</span>
+                <span className="card__value-br">{card.value}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="special-overlay__label">
+          {isJoker ? '✦ COMODÍN ✦' : '✦ RESET ✦'}
+        </div>
+        <div className="special-overlay__who">
+          {isMe ? '¡Tú jugaste la carta!' : playerName + ' jugó la carta'}
+        </div>
+        {burned && (
+          <div className="special-overlay__burned">🔥 ¡La pila se quema!</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Overlay de coronación del idiota ────────────────────────────────────────
+
+function CrownOverlay({ visible, loserName, amILoser, onDone }) {
+  if (!visible) return null;
+
+  return (
+    <div className="crown-overlay" onAnimationEnd={onDone}>
+      <div className="crown-overlay__backdrop" />
+      <div className="crown-overlay__stage">
+        <div className="crown-overlay__crown">👑</div>
+        <div className="crown-overlay__sparks">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <span key={i} className="crown-overlay__spark" style={{ '--i': i }} />
+          ))}
+        </div>
+        <div className="crown-overlay__text">
+          {amILoser ? 'La corona del idiota es tuya…' : (loserName || 'Alguien') + ' es coronado…'}
+        </div>
+        <div className="crown-overlay__subtext">
+          {amILoser ? '🤡 TÚ ERES EL IDIOTA' : '🤡 EL IDIOTA HA SIDO REVELADO'}
+        </div>
+        <div className="crown-overlay__timer">
+          <div className="crown-overlay__timer-bar" onAnimationEnd={onDone} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Overlay de carta revelada (fase de azar) ───────────────────────────────
 
 /**
@@ -601,9 +676,13 @@ export default function Game({ gameState, myId, roomId, socket }) {
   const savedPlayers                  = gameState?.savedPlayers ?? [];
   const amISaved                      = gameState?.players?.find(p => p.id === myId)?.isSaved ?? false;
 
-  // ── Reveal de carta oculta mala ──────────────────────────────────────────────
-  // { playerName, card, mustPickUp } — null cuando no hay reveal activo
-  const [revealEvent, setRevealEvent] = useState(null);
+  // ── Reveal de carta oculta (azar) ───────────────────────────────────────────
+  const [revealEvent, setRevealEvent]     = useState(null);
+  // ── Jugada especial (8 o Joker) ─────────────────────────────────────────────
+  const [specialEvent, setSpecialEvent]   = useState(null);
+  // ── Animación de coronación del idiota antes de mostrar FINISHED ─────────────
+  const [showCrown, setShowCrown]         = useState(false);
+  const [crownDone, setCrownDone]         = useState(false);
 
   // Escuchar evento personal player_saved del servidor
   useState(() => {
@@ -621,24 +700,52 @@ export default function Game({ gameState, myId, roomId, socket }) {
   useState(() => {
     if (!socket) return;
     const handler = (data) => {
+      const { card, mustPickUp } = data;
+      const isSpecial = card.value === '8' || card.value === '🃏' || card.value === 'JOKER';
+      // Si es 8/Joker bueno, el SpecialPlayOverlay ya cubre la animación — no duplicar
+      if (!mustPickUp && isSpecial) return;
       setRevealEvent(data);
-      // Desaparecer el overlay justo cuando llega el game_started del pickup (3 s)
       setTimeout(() => setRevealEvent(null), 3200);
     };
     socket.on('card_revealed', handler);
     return () => socket.off('card_revealed', handler);
   });
 
+  // Escuchar special_play (8 o Joker)
+  useState(() => {
+    if (!socket) return;
+    const handler = (data) => {
+      setSpecialEvent(data);
+      setTimeout(() => setSpecialEvent(null), 2200);
+    };
+    socket.on('special_play', handler);
+    return () => socket.off('special_play', handler);
+  });
+
   // ── Pantalla FINISHED ──────────────────────────────────────────────────────
-  const loserId   = gameState?.loserId;
+  const loserId   = gameState?.loserId ?? null;
   const loserName = gameState?.players?.find(p => p.id === loserId)?.username
-                    ?? gameState?.loserName;
-  const amILoser  = loserId === myId;
+                    ?? gameState?.loserName
+                    ?? null;
+  // amILoser solo es true si loserId está definido Y coincide con myId
+  const amILoser  = !!loserId && loserId === myId;
+  const amISavedFinished = !!loserId && loserId !== myId;
 
   return (
     <div className="game">
-      {/* ── Overlay de carta revelada ── */}
+      {/* ── Overlay de carta revelada (azar) ── */}
       <CardRevealOverlay event={revealEvent} myId={myId} />
+
+      {/* ── Overlay de jugada especial (8 / Joker) ── */}
+      <SpecialPlayOverlay event={specialEvent} myId={myId} />
+
+      {/* ── Animación de coronación del idiota ── */}
+      <CrownOverlay
+        visible={gameState?.status === 'FINISHED' && !crownDone}
+        loserName={loserName}
+        amILoser={amILoser}
+        onDone={() => setCrownDone(true)}
+      />
 
       {/* ── Topbar ── */}
       <header className="game__topbar">
@@ -717,7 +824,7 @@ export default function Game({ gameState, myId, roomId, socket }) {
           </div>
         )}
 
-        {status === 'FINISHED' && (
+        {status === 'FINISHED' && crownDone && (
           <div className="game__finished">
             {amILoser ? (
               <>
@@ -741,8 +848,8 @@ export default function Game({ gameState, myId, roomId, socket }) {
               </>
             )}
 
-            {/* Ranking de salvados */}
-            {savedPlayers.length > 0 && (
+            {/* Ranking de salvados — incluye al último salvado */}
+            {(savedPlayers.length > 0 || loserId) && (
               <div className="game__finished-ranking">
                 <div className="game__finished-ranking-title">🏅 Orden de salvación</div>
                 {savedPlayers.map((sp, i) => (
@@ -757,7 +864,7 @@ export default function Game({ gameState, myId, roomId, socket }) {
                   <div className="game__finished-rank-entry game__finished-rank-entry--loser">
                     <span className="game__finished-rank-pos">🤡</span>
                     <span className="game__finished-rank-name">
-                      {loserId === myId ? `${loserName ?? 'Tú'} (Tú) — EL IDIOTA` : `${loserName} — EL IDIOTA`}
+                      {amILoser ? `${loserName ?? 'Tú'} (Tú) — EL IDIOTA` : `${loserName} — EL IDIOTA`}
                     </span>
                   </div>
                 )}

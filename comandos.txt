@@ -2,5 +2,5 @@ frontend: npm run dev
 backend: node src/server.js
 
 Las URLS se encuentran en:
- Serve.js linea 56 en (const io)
- useSocket.js linea 14
+ -Serve.js linea 56 en (const io): https://wt61pzl2-5173.use2.devtunnels.ms
+ -useSocket.js linea 14: https://wt61pzl2-3000.use2.devtunnels.ms
