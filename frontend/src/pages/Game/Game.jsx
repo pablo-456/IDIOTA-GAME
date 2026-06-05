@@ -435,6 +435,71 @@ function PlayingPhase({ gameState, myId, socket, roomId }) {
   );
 }
 
+// ─── Overlay de carta revelada (fase de azar) ───────────────────────────────
+
+/**
+ * Overlay dramático mostrado a TODOS cuando alguien voltea una carta oculta mala.
+ * Se muestra 3 segundos antes de que la pila se tome automáticamente.
+ */
+function CardRevealOverlay({ event, myId }) {
+  if (!event) return null;
+
+  const { playerId, playerName, card, mustPickUp } = event;
+  const isMe    = playerId === myId;
+  const joker   = card.value === '🃏';
+  const red     = card.suit === '♥' || card.suit === '♦';
+  const special = card.value === '2' || card.value === '8' || joker;
+
+  return (
+    <div className="reveal-overlay">
+      <div className="reveal-overlay__backdrop" />
+      <div className="reveal-overlay__card-stage">
+
+        <div className="reveal-overlay__who">
+          {isMe ? '¡Volteaste una carta!' : playerName + ' volteó una carta oculta'}
+        </div>
+
+        <div className="reveal-overlay__card-wrap">
+          <div
+            className={[
+              'card', 'reveal-overlay__card',
+              joker   ? 'card--joker'   : '',
+              special ? 'card--special' : '',
+              red     ? 'card--red'     : '',
+            ].filter(Boolean).join(' ')}
+          >
+            {joker ? (
+              <span className="card__joker-icon">🃏</span>
+            ) : (
+              <>
+                <span className="card__value-tl">{card.value}</span>
+                <span className="card__suit-center">{card.suit}</span>
+                <span className="card__value-br">{card.value}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {mustPickUp ? (
+          <div className="reveal-overlay__verdict reveal-overlay__verdict--bad">
+            {isMe
+              ? '😬 Carta baja… ¡recoge la pila!'
+              : '😂 Carta baja — ' + playerName + ' se lleva la pila'}
+          </div>
+        ) : (
+          <div className="reveal-overlay__verdict reveal-overlay__verdict--good">
+            {isMe ? '😎 ¡Buena carta!' : '😎 ¡Buena carta para ' + playerName + '!'}
+          </div>
+        )}
+
+        <div className="reveal-overlay__timer">
+          <div className="reveal-overlay__timer-bar" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Vista Espectador (jugador salvado mirando la partida) ───────────────────
 
 function SpectatorView({ gameState, myId }) {
@@ -536,6 +601,10 @@ export default function Game({ gameState, myId, roomId, socket }) {
   const savedPlayers                  = gameState?.savedPlayers ?? [];
   const amISaved                      = gameState?.players?.find(p => p.id === myId)?.isSaved ?? false;
 
+  // ── Reveal de carta oculta mala ──────────────────────────────────────────────
+  // { playerName, card, mustPickUp } — null cuando no hay reveal activo
+  const [revealEvent, setRevealEvent] = useState(null);
+
   // Escuchar evento personal player_saved del servidor
   useState(() => {
     if (!socket) return;
@@ -548,6 +617,18 @@ export default function Game({ gameState, myId, roomId, socket }) {
     return () => socket.off('player_saved', handler);
   });
 
+  // Escuchar card_revealed
+  useState(() => {
+    if (!socket) return;
+    const handler = (data) => {
+      setRevealEvent(data);
+      // Desaparecer el overlay justo cuando llega el game_started del pickup (3 s)
+      setTimeout(() => setRevealEvent(null), 3200);
+    };
+    socket.on('card_revealed', handler);
+    return () => socket.off('card_revealed', handler);
+  });
+
   // ── Pantalla FINISHED ──────────────────────────────────────────────────────
   const loserId   = gameState?.loserId;
   const loserName = gameState?.players?.find(p => p.id === loserId)?.username
@@ -556,6 +637,9 @@ export default function Game({ gameState, myId, roomId, socket }) {
 
   return (
     <div className="game">
+      {/* ── Overlay de carta revelada ── */}
+      <CardRevealOverlay event={revealEvent} myId={myId} />
+
       {/* ── Topbar ── */}
       <header className="game__topbar">
         <div className="game__topbar-left">

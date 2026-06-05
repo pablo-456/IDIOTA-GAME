@@ -1,2 +1,6 @@
 frontend: npm run dev
 backend: node src/server.js
+
+Las URLS se encuentran en:
+ Serve.js linea 56 en (const io)
+ useSocket.js linea 14

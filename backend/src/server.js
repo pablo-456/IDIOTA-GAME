@@ -53,7 +53,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     // En producción, reemplaza '*' por el dominio real del frontend
-    origin: process.env.FRONTEND_URL || '*',
+    origin: process.env.FRONTEND_URL || 'https://wt61pzl2-5173.use2.devtunnels.ms',
     methods: ['GET', 'POST'],
   },
 });
@@ -264,43 +264,81 @@ io.on('connection', (socket) => {
       return emitError(socket, result.error);
     }
 
-    // El jugador se salvó (se quedó sin cartas)
-    if (result.saved) {
-      const savedPlayer = game.players.find((p) => p.id === socket.id);
+    // ── Carta oculta mala → revelar, esperar 3 s, luego pickup ──
+    if (result.forcedPickUp) {
+      const revealer = game.players.find((p) => p.id === socket.id);
 
-      // Notificar al jugador salvado con su mensaje especial
+      // Sincronizar estado intermedio (carta visible en pila, aún no recogida)
+      for (const player of game.players) {
+        io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
+      }
+
+      // Anunciar el reveal dramático a toda la sala
+      io.to(roomId).emit('card_revealed', {
+        playerId:     socket.id,
+        playerName:   revealer?.username ?? 'Alguien',
+        card:         result.revealedCard,
+        pileTopPower: game.pileTopPower,
+        mustPickUp:   true,
+      });
+
+      // Tras 3 s confirmar el pickup y re-sincronizar
+      setTimeout(() => {
+        const pickResult = game.confirmForcedPickUp();
+        if (!pickResult.success) return;
+        for (const player of game.players) {
+          io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
+        }
+      }, 3000);
+
+      return;
+    }
+
+    // ── El jugador se salvó (se quedó sin cartas) ──
+    if (result.saved) {
+      // Notificar solo al jugador salvado con su mensaje especial
       socket.emit('player_saved', {
-        message: '🎉 ¡Te salvaste! Ya no tienes cartas. Sigue viendo la partida…',
+        message:      '🎉 ¡Te salvaste! Ya no tienes cartas.',
         savedPlayers: game.savedPlayers,
       });
 
-      // Si la partida terminó (queda 1 solo con cartas → es el idiota)
+      // ¿La partida terminó? (queda 1 solo con cartas → el idiota)
       if (result.gameOver) {
         const loser = game.players.find((p) => p.id === game.loserId);
         io.to(roomId).emit('game_over', {
-          loserId:   game.loserId,
-          loserName: loser?.username ?? 'Desconocido',
+          loserId:      game.loserId,
+          loserName:    loser?.username ?? 'Desconocido',
           savedPlayers: game.savedPlayers,
-          reason:    'El último jugador con cartas es el idiota.',
+          reason:       'El último jugador con cartas es el idiota.',
         });
         return;
       }
 
-      // La partida continúa — notificar a todos del nuevo estado
+      // La partida continúa — enviar estado actualizado a todos
+      // (el turno ya fue avanzado por checkSaved → nextTurn)
       for (const player of game.players) {
         io.to(player.id).emit('game_started', {
-          state: game.toPrivateState(player.id),
+          state:        game.toPrivateState(player.id),
           savedPlayers: game.savedPlayers,
         });
       }
       return;
     }
 
-    // Jugada normal — sincronizar estado con todos
-    for (const player of game.players) {
-      io.to(player.id).emit('game_started', {
-        state: game.toPrivateState(player.id),
+    // ── Jugada normal ──
+    // Si fue carta oculta buena, revelarla a todos antes de sincronizar
+    if (result.revealedCard) {
+      const revealer = game.players.find((p) => p.id === socket.id);
+      io.to(roomId).emit('card_revealed', {
+        playerId:    socket.id,
+        playerName:  revealer?.username ?? 'Alguien',
+        card:        result.revealedCard,
+        mustPickUp:  false,
       });
+    }
+
+    for (const player of game.players) {
+      io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
     }
   });
 
@@ -359,7 +397,7 @@ io.on('connection', (socket) => {
       message:     'Un jugador se ha desconectado.',
     });
 
-    // Si la partida terminó por la desconexión (ej. quedaron < 2 jugadores activos)
+    // Si la partida terminó por la desconexión (ej. quedaron < 2 jugadores)
     if (game.status === 'FINISHED') {
       const loser = game.players.find((p) => p.id === game.loserId);
       io.to(roomId).emit('game_over', {
@@ -384,4 +422,4 @@ server.listen(PORT, () => {
   console.log(`╚══════════════════════════════════════╝\n`);
 });
 
-module.exports = { app, server, io }; // útil para tests
+module.exports = { app, server, io }; 

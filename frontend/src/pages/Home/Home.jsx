@@ -51,7 +51,7 @@ export default function Home() {
         <header className="home__header">
           <div className="home__crown" aria-hidden="true">♛</div>
           <h1 className="home__title">IDIOTA</h1>
-          <p className="home__subtitle">El juego de cartas que te pondrá a prueba</p>
+          <p className="home__subtitle">Este juego es muy facil, o eres un idiota 🤨</p>
           <div className="home__divider">
             <span>♠</span><span>♥</span><span>♦</span><span>♣</span>
           </div>
@@ -82,7 +82,7 @@ export default function Home() {
 
           <div className="home__field">
             <label className="home__label" htmlFor="roomcode">
-              Código de sala <span className="home__label-opt">(opcional)</span>
+              Código de sala <span className="home__label-opt">(Solo si eres invitado ingresa el código)</span>
             </label>
             <input
               id="roomcode"

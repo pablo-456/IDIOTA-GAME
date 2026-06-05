@@ -117,7 +117,6 @@ class Game {
     /**
      * @type {string|null}
      * socket.id del jugador perdedor — el último en quedarse con cartas (el "idiota").
-     * Solo relevante en estado FINISHED.
      */
     this.loserId = null;
 
@@ -126,6 +125,12 @@ class Game {
      * Jugadores que ya se quedaron sin cartas (salvados), en orden de salida.
      */
     this.savedPlayers = [];
+
+    /**
+     * Carta oculta mala revelada pendiente de pickup (esperando el delay de 3s del servidor).
+     * @type {{ playerId: string, card: object } | null}
+     */
+    this.pendingForcedPickUp = null;
 
     // El host es el primer jugador en unirse
     this._addPlayerObject(hostId, hostName);
@@ -418,12 +423,23 @@ class Game {
           // 2. Añadimos la carta a la pila (para que se sume al castigo)
           this.pile.push(...cardsToPlay);
 
-          // 3. Forzamos la recogida automática de toda la mesa a su mano privada
-          player.manoPrivada.push(...this.pile);
-          this.pile = [];
+          // 3. NO ejecutamos el pickup aquí — guardamos el estado pendiente para
+          //    que el servidor pueda primero revelar la carta a todos (drama), y
+          //    luego confirmar el pickup con confirmForcedPickUp().
+          this.pendingForcedPickUp = {
+            playerId: player.id,
+            card:     cardsToPlay[0],
+          };
 
-          // REGLA: El turno NO avanza. El jugador inicia la nueva ronda con su mano privada recién obtenida.
-          return { success: true, burned: false, extraTurn: false, won: false, forcedPickUp: true };
+          // Retornamos la carta revelada para que el servidor la emita a la sala
+          return {
+            success:      true,
+            burned:       false,
+            extraTurn:    false,
+            won:          false,
+            forcedPickUp: true,
+            revealedCard: cardsToPlay[0],
+          };
         }
 
         // Para 'manoPrivada' o 'cartasVisibles', sigue siendo un movimiento inválido (error)
@@ -448,7 +464,7 @@ class Game {
       this.pile  = [];
       burned     = true;
       extraTurn  = true;
-    } 
+    }
 
     // El jugador roba del mazo hasta completar 4 en manoPrivada
     if (this.deck.remaining > 0 && player.manoPrivada.length < 4) {
@@ -466,7 +482,10 @@ class Game {
       this.nextTurn();
     }
 
-    return { success: true, burned, extraTurn, saved: false, gameOver: false };
+    // Si la carta vino de cartasOcultas y fue buena, informarlo para el reveal
+    const revealedCard = (zone === 'cartasOcultas') ? cardsToPlay[0] : null;
+
+    return { success: true, burned, extraTurn, saved: false, gameOver: false, revealedCard };
   }
 
   /**
@@ -505,34 +524,50 @@ class Game {
     return { success: true, cardsPickedUp: count, voluntary };
   }
 
+  /**
+   * Ejecuta la recogida forzada que quedó pendiente tras revelar una carta oculta mala.
+   * Debe llamarse desde el servidor después del delay de revelación.
+   *
+   * @returns {{ success: boolean, cardsPickedUp: number }}
+   */
+  confirmForcedPickUp() {
+    const pending = this.pendingForcedPickUp;
+    if (!pending) return { success: false, error: 'No hay recogida forzada pendiente.' };
+
+    const player = this.players.find((p) => p.id === pending.playerId);
+    if (!player) return { success: false, error: 'Jugador no encontrado.' };
+
+    const count = this.pile.length;
+
+    // Mover toda la pila (que ya incluye la carta revelada) a la mano del jugador
+    player.manoPrivada.push(...this.pile);
+    this.pile = [];
+
+    // Limpiar el estado pendiente
+    this.pendingForcedPickUp = null;
+
+    // El turno NO avanza: el jugador que recogió abre la nueva ronda con mesa vacía
+    return { success: true, cardsPickedUp: count };
+  }
+
   // ─── Utilidades de turno ─────────────────────────────────────────────────
 
   /**
    * Avanza el turno al siguiente jugador activo (isSaved=false).
-   * Protección: si todos están salvados (no debería pasar), no cicla infinito.
    */
   nextTurn() {
     if (this.players.length === 0) return;
-
     const total = this.players.length;
     let attempts = 0;
-
     do {
       this.currentTurnIndex = (this.currentTurnIndex + 1) % total;
       attempts++;
-    } while (
-      attempts < total &&
-      this.players[this.currentTurnIndex]?.isSaved
-    );
+    } while (attempts < total && this.players[this.currentTurnIndex]?.isSaved);
   }
 
   /**
    * Verifica si un jugador se ha salvado (sin cartas en ninguna zona).
-   * Un jugador salvado sale de la rotación de turnos pero sigue viendo la partida.
-   * Si solo queda 1 jugador con cartas, ese es el "idiota" y la partida termina.
-   *
-   * @param {string} playerId
-   * @returns {{ saved: boolean, gameOver: boolean }}
+   * Si queda 1 solo jugador con cartas → ese es el idiota, partida FINISHED.
    */
   checkSaved(playerId) {
     const player = this.players.find((p) => p.id === playerId);
@@ -545,34 +580,42 @@ class Game {
 
     if (!hasNoCards) return { saved: false, gameOver: false };
 
-    // Marcar al jugador como salvado
+    // Ya estaba marcado como salvado (doble check)
+    if (player.isSaved) return { saved: false, gameOver: false };
+
     player.isSaved = true;
     this.savedPlayers.push({ id: player.id, username: player.username, savedAt: this.savedPlayers.length + 1 });
 
-    // ¿Cuántos jugadores aún tienen cartas?
     const activePlayers = this.players.filter((p) => !p.isSaved);
 
     if (activePlayers.length <= 1) {
-      // El último con cartas es el idiota — la partida termina
       this.status  = 'FINISHED';
       this.loserId = activePlayers[0]?.id ?? null;
       return { saved: true, gameOver: true };
     }
 
-    // La partida continúa — avanzar el turno al siguiente jugador activo.
-    // Hay que llamar nextTurn() aquí porque playTurn() retorna inmediatamente
-    // tras detectar el salvado, sin pasar por el nextTurn() normal.
+    // Avanzar el turno al siguiente jugador activo
     this.nextTurn();
 
     return { saved: true, gameOver: false };
   }
 
   /**
-   * @deprecated Mantener compatibilidad — usar checkSaved()
+   * Ejecuta la recogida forzada pendiente tras revelar una carta oculta mala.
    */
-  checkWinner(playerId) {
-    const result = this.checkSaved(playerId);
-    return result.gameOver;
+  confirmForcedPickUp() {
+    const pending = this.pendingForcedPickUp;
+    if (!pending) return { success: false, error: 'No hay recogida forzada pendiente.' };
+
+    const player = this.players.find((p) => p.id === pending.playerId);
+    if (!player) return { success: false, error: 'Jugador no encontrado.' };
+
+    const count = this.pile.length;
+    player.manoPrivada.push(...this.pile);
+    this.pile = [];
+    this.pendingForcedPickUp = null;
+
+    return { success: true, cardsPickedUp: count };
   }
 
   // ─── Serialización segura ────────────────────────────────────────────────
@@ -591,8 +634,8 @@ class Game {
       pile:             this.pile,
       deckRemaining:    this.deck.remaining,
       winnerId:         this.winnerId,
-      loserId:          this.loserId,
-      savedPlayers:     this.savedPlayers,
+      loserId:      this.loserId,
+      savedPlayers: this.savedPlayers,
       players: this.players.map((p) => ({
         id:                   p.id,
         username:             p.username,

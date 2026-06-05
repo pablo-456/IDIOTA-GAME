@@ -10,8 +10,8 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
-
-const SERVER_URL = 'http://localhost:3000';
+//const SERVER_URL = 'http://localhost:3000';
+const SERVER_URL = 'https://wt61pzl2-3000.use2.devtunnels.ms';
 
 /**
  * Singleton de socket: una sola instancia compartida en toda la app.
