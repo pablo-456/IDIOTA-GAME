@@ -455,6 +455,13 @@ class Game {
     // Remover cartas de la zona activa del jugador
     player[zone] = sourceCards.filter((c) => !uniqueCardIds.includes(c.id));
 
+    // Si jugó desde cartasVisibles, sincronizar el snapshot público:
+    // solo quedan públicas las que siguen existiendo en cartasVisibles reales.
+    if (zone === 'cartasVisibles') {
+      const visiblesIds = new Set(player.cartasVisibles.map((c) => c.id));
+      player.cartasVisiblesPublicas = player.cartasVisiblesPublicas.filter((c) => visiblesIds.has(c.id));
+    }
+
     // Añadir cartas a la pila
     this.pile.push(...cardsToPlay);
 
