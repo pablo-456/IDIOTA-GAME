@@ -445,6 +445,18 @@ function PlayingPhase({ gameState, myId, socket, roomId }) {
           </span>
         </div>
 
+        {/* ── Strip de cartas visibles propias — solo visible en móvil ── */}
+        {myHand?.cartasVisibles?.length > 0 && (
+          <div className="playing__hand-mobile-visibles">
+            <span className="playing__hand-mobile-visibles-label">👁 Visibles</span>
+            <div className="playing__hand-mobile-visibles-cards">
+              {myHand.cartasVisibles.map((card) => (
+                <Card key={card.id} card={card} small disabled />
+              ))}
+            </div>
+          </div>
+        )}
+
 
         <div className="playing__hand-cards">
           {activeCards.map((card) => {

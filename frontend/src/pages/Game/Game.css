@@ -289,7 +289,7 @@
   background:
     repeating-linear-gradient(
       45deg,
-      #0d2e10 0px,
+      #011102 0px,
       #0d2e10 4px,
       #122e14 4px,
       #122e14 8px
@@ -613,19 +613,6 @@
   position: relative;
 }
 
-.playing__deck-stack::before,
-.playing__deck-stack::after {
-  content: '';
-  position: absolute;
-  width: 62px; height: 90px;
-  border-radius: var(--r);
-  background: repeating-linear-gradient(45deg,#0d2e10 0,#0d2e10 4px,#122e14 4px,#122e14 8px);
-  border: 2px solid rgba(201,168,76,0.25);
-}
-
-.playing__deck-stack::before { transform: translate(-3px, 3px); z-index: 0; }
-.playing__deck-stack::after  { transform: translate(-6px, 6px); z-index: -1; opacity:0.7; }
-
 .playing__deck-stack .card--facedown { position: relative; z-index: 1; }
 
 .playing__deck-count {
@@ -650,7 +637,7 @@
 
 .playing__pickup-btn {
   padding: 0.3rem 0.8rem;
-  background: rgba(201,168,76,0.08);
+  background: rgba(0,0,0,0.55);
   border: 1px solid rgba(201,168,76,0.3);
   border-radius: 20px;
   color: var(--gold-dim);
@@ -1289,25 +1276,136 @@
 .game__finished-rank-name { flex: 1; }
 
 /* ════════════════════════════════════════════════════════
-   RESPONSIVE
+   RESPONSIVE — Móvil
 ════════════════════════════════════════════════════════ */
-@media (max-width: 600px) {
-  .game__topbar { padding: 0 0.75rem; }
-  .playing__board { padding: 0.5rem; }
-  .playing__board-inner { gap: 1.25rem; }
-  .playing__hand { padding: 0.5rem 0.75rem 0.75rem; }
-  .playing__opponents { padding: 0.5rem 0.75rem; gap: 0.4rem; }
-  .opponent { min-width: 120px; }
+
+/* ── Tablet / pantalla media ── */
+@media (max-width: 768px) {
+  .game__my-visibles-panel { width: 68px; }
   .game__saved-panel { width: 90px; }
-  .game__saved-panel-title { font-size: 0.54rem; }
-  .game__saved-name { font-size: 0.58rem; }
 }
 
-@media (max-width: 420px) {
-  .card { width: 54px; height: 78px; }
-  .card__suit-center { font-size: 1.4rem; }
-  .card__value-tl, .card__value-br { font-size: 0.75rem; }
+/* ── Móvil (<= 600px) ── */
+@media (max-width: 600px) {
+
+  /* Topbar compacto */
+  .game__topbar { padding: 0 0.6rem; height: 44px; }
+  .game__logo { font-size: 0.95rem; letter-spacing: 0.12em; }
+  .game__room-code { font-size: 0.62rem; padding: 0.15rem 0.45rem; }
+  .game__phase-badge { font-size: 0.7rem; padding: 0.22rem 0.7rem; }
+  .game__deck-info { font-size: 0.7rem; }
+
+  /* ── Rivales: tarjetas más compactas ── */
+  .playing__opponents {
+    padding: 0.4rem 0.6rem;
+    gap: 0.35rem;
+  }
+
+  .opponent {
+    min-width: 100px;
+    max-width: 140px;
+    padding: 0.35rem 0.45rem;
+    gap: 0.25rem;
+  }
+
+  .opponent__avatar {
+    width: 22px; height: 22px;
+    font-size: 0.65rem;
+  }
+
+  .opponent__name { font-size: 0.7rem; }
+  .opponent__card-count { font-size: 0.62rem; }
+  .opponent__turn-badge { font-size: 0.52rem; }
+
+  /* Ocultar cartas ocultas (face-down) de rivales en móvil para ahorrar espacio */
+  .opponent__hidden { display: none; }
+
+  /* Cartas visibles de rivales más pequeñas */
+  .opponent__visibles { gap: 2px; }
+
+  /* ── Mesa central más compacta ── */
+  .playing__board { padding: 0.4rem 0.6rem; }
+  .playing__board-inner { gap: 1.2rem; }
+  .playing__turn-banner { font-size: 0.7rem; padding: 0.25rem 0.8rem; margin-top: 0.4rem; }
+
+  /* ── Mano: sin restricción de altura excesiva en móvil ── */
+  .playing__hand {
+    padding: 0.45rem 0.6rem 0.7rem;
+    max-height: 42vh;
+  }
+
+  .playing__hand-zone-label { font-size: 0.65rem; }
+
+  .playing__hand-cards {
+    gap: 4px;
+    min-height: 70px;
+  }
+
+  .playing__hand-actions { margin-top: 0.5rem; }
+
+  .playing__play-btn {
+    font-size: 0.78rem;
+    padding: 0.45rem 1.1rem;
+  }
+
+  /* ── Paneles laterales: ocultos en móvil ── */
+  .game__saved-panel { display: none; }
+  .game__my-visibles-panel { display: none; }
+
+  /* ── Strip de cartas visibles propias debajo del header de la mano ── */
+  .playing__hand-mobile-visibles {
+    display: flex !important;
+  }
+
+  /* ── Pickup btn ── */
+  .playing__pickup-btn { font-size: 0.66rem; padding: 0.25rem 0.65rem; }
 }
+
+/* ── Móvil muy pequeño (<= 420px) ── */
+@media (max-width: 420px) {
+  .card { width: 52px; height: 75px; }
+  .card__suit-center { font-size: 1.3rem; }
+  .card__value-tl, .card__value-br { font-size: 0.72rem; }
+  .card--small { width: 38px; height: 55px; border-radius: 6px; }
+  .card--small .card__suit-center { font-size: 0.95rem; }
+  .card--small .card__value-tl,
+  .card--small .card__value-br { font-size: 0.6rem; }
+
+  .opponent { min-width: 88px; max-width: 120px; }
+  .opponent__name { font-size: 0.62rem; }
+}
+
+/* ════════════════════════════════════════════════════════
+   STRIP DE VISIBLES PROPIAS — móvil (inline en mano)
+════════════════════════════════════════════════════════ */
+.playing__hand-mobile-visibles {
+  display: none; /* oculto en desktop, activado en @media móvil */
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0 0.45rem;
+  margin-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+}
+
+.playing__hand-mobile-visibles-label {
+  font-size: 0.58rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--gold-dim);
+  white-space: nowrap;
+}
+
+.playing__hand-mobile-visibles-cards {
+  display: flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.playing__hand-mobile-visibles-cards::-webkit-scrollbar { display: none; }
 
 /* ════════════════════════════════════════════════════════
    OVERLAY — Revelación de carta oculta (fase de azar)
