@@ -52,6 +52,7 @@ export default function Home() {
           <div className="home__crown" aria-hidden="true">♛</div>
           <h1 className="home__title">IDIOTA</h1>
           <p className="home__subtitle">Este juego es muy facil, o eres un idiota 🤨</p>
+          <p className="home__subtitle">IDIOTA BY PABLO-456 ¬_¬</p>
           <div className="home__divider">
             <span>♠</span><span>♥</span><span>♦</span><span>♣</span>
           </div>

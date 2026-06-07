@@ -359,7 +359,6 @@ class Game {
    *                   sigue pero el poder efectivo baja a 0.
    *   • Valor '8'   → burn: quema la pila y da turno extra.
    *   • Valor 'J'   → Joker: quema la pila y da turno extra.
-   *   • Cuatro iguales acumuladas en la pila → queman y dan turno extra.
    *   • En todos los demás casos, las cartas deben tener power ≥ pileTopPower.
    *
    * Después de jugar:

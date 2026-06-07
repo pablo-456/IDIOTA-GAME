@@ -130,6 +130,32 @@ function PileDisplay({ pile }) {
   );
 }
 
+// ─── Panel de cartas visibles propias (durante la partida) ───────────────────
+
+/**
+ * Muestra al jugador sus propias cartas visibles (cartasVisibles) en un panel lateral.
+ * Se muestra durante la fase PLAYING mientras el jugador aún tiene cartas.
+ */
+function MyVisiblesPanel({ myHand }) {
+  const visibles = myHand?.cartasVisibles ?? [];
+
+  if (visibles.length === 0) return null;
+
+  return (
+    <aside className="game__my-visibles-panel">
+      <div className="game__my-visibles-title">
+        <span className="game__my-visibles-icon">👁</span>
+        <span>Mis Visibles</span>
+      </div>
+      <div className="game__my-visibles-cards">
+        {visibles.map((card) => (
+          <Card key={card.id} card={card} small disabled />
+        ))}
+      </div>
+    </aside>
+  );
+}
+
 // ─── Fase SETUP ──────────────────────────────────────────────────────────────
 
 function SetupPhase({ myHand, socket, roomId, isMeReady }) {
@@ -857,6 +883,11 @@ export default function Game({ gameState, myId, roomId, socket }) {
                 />
               )}
             </div>
+
+            {/* ── Panel derecho: cartas visibles propias ── */}
+            {!amISaved && (
+              <MyVisiblesPanel myHand={gameState?.myHand} />
+            )}
           </div>
         )}
 
