@@ -113,6 +113,14 @@ export default function Lobby({ roomId, gameState, myId }) {
             ))}
           </ul>
 
+          {/* Botón volver al inicio */}
+          <button
+            className="lobby__home-btn"
+            onClick={() => window.location.reload()}
+          >
+            ↩ Volver al inicio
+          </button>
+
           {/* Mensaje de espera / acción */}
           <div className="lobby__footer-zone">
             {isHost ? (

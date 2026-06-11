@@ -949,6 +949,14 @@ export default function Game({ gameState, myId, roomId, socket }) {
                 )}
               </div>
             )}
+
+            {/* Botón volver al inicio */}
+            <button
+              className="game__finished-home-btn"
+              onClick={() => window.location.reload()}
+            >
+              ↩ Volver al inicio
+            </button>
           </div>
         )}
       </main>

@@ -419,6 +419,31 @@
   animation: spin 0.7s linear infinite;
 }
 
+/* ── Botón de volver ── */
+.lobby__home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1.2rem;
+  margin-bottom: 1rem;
+  background: transparent;
+  color: var(--gold-dim, #8a6f2e);
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  border-radius: var(--radius-btn, 6px);
+  font-family: var(--font-body, serif);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  align-self: flex-start;
+}
+ 
+.lobby__home-btn:hover {
+  color: var(--gold, #c9a84c);
+  border-color: rgba(201, 168, 76, 0.45);
+  background: rgba(201, 168, 76, 0.05);
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Responsive ── */

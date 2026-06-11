@@ -31,7 +31,6 @@
   min-height: 100vh;
   background-color: var(--ink);
   background-image:
-    /* Viñeta central */
     radial-gradient(ellipse 80% 70% at 50% 40%, var(--felt) 0%, var(--ink) 100%);
   display: flex;
   align-items: center;
@@ -71,7 +70,169 @@
   50%       { transform: translateY(-20px) rotate(4deg); }
 }
 
-/* ── Tarjeta / panel central ── */
+/* ══════════════════════════════════════════════════
+   SIDEBAR LATERAL — Bloques de apoyo y novedades
+   ══════════════════════════════════════════════════ */
+.home__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  width: 230px;
+  position: absolute;
+  left: 2rem;
+  top: 4%;
+  transform: translateY(-50%);
+  z-index: 1;
+  animation: card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+/* Bloque base compartido */
+.home__side-block {
+  background: linear-gradient(160deg, var(--felt-mid) 0%, var(--felt) 100%);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius-card);
+  padding: 1.4rem 1.3rem;
+  box-shadow:
+    var(--shadow-deep),
+    inset 0 1px 0 rgba(201,168,76,0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Línea dorada decorativa top en cada bloque */
+.home__side-block::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  border-radius: 2px;
+}
+
+/* Símbolo decorativo de fondo */
+.home__side-block-deco {
+  position: absolute;
+  bottom: -0.6rem;
+  right: 0.8rem;
+  font-size: 4.5rem;
+  color: var(--gold);
+  opacity: 0.04;
+  font-family: var(--font-display);
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+}
+
+/* Etiqueta de sección (título pequeño) */
+.home__side-label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--gold-dim);
+  margin: 0 0 0.6rem;
+}
+
+/* Descripción del bloque de apoyo */
+.home__side-desc {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 0.88rem;
+  color: var(--cream-dim);
+  margin: 0 0 1rem;
+  line-height: 1.55;
+}
+
+/* ── Botón de donación ── */
+.home__support-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-btn);
+  background: linear-gradient(135deg, #b8922a 0%, var(--gold-light) 50%, #b8922a 100%);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(201,168,76,0.35);
+  transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.home__support-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.4s;
+}
+
+.home__support-btn:hover::after { transform: translateX(100%); }
+
+.home__support-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(201,168,76,0.5);
+}
+
+.home__support-btn:active { transform: translateY(0); }
+
+.home__support-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* ── Divisor de naipes para el bloque de notas ── */
+.home__side-divider {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  color: var(--gold-dim);
+  font-size: 0.85rem;
+  margin-bottom: 0.9rem;
+}
+
+.home__side-divider span:nth-child(2),
+.home__side-divider span:nth-child(4) { color: var(--red-suit); }
+
+/* ── Lista de notas de parche ── */
+.home__patch-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.home__patch-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.87rem;
+  color: var(--cream-dim);
+  line-height: 1.45;
+}
+
+.home__patch-bullet {
+  color: var(--gold-dim);
+  font-size: 0.6rem;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+/* ══════════════════════════════════════════════════
+   CARD PRINCIPAL (sin cambios respecto al original)
+   ══════════════════════════════════════════════════ */
 .home__card {
   width: 100%;
   max-width: 480px;
@@ -88,7 +249,6 @@
   z-index: 1;
 }
 
-/* Línea dorada decorativa top */
 .home__card::before {
   content: '';
   position: absolute;
@@ -371,7 +531,39 @@
   font-style: italic;
 }
 
-/* ── Responsive ── */
-@media (max-width: 480px) {
+/* ══════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════ */
+
+/* Pantallas donde no hay espacio para el sidebar absoluto: lo metemos al flujo */
+@media (max-width: 1100px) {
+  .home__sidebar {
+    position: static;
+    transform: none;
+    width: 100%;
+    max-width: 480px;
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .home {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    overflow-y: auto;
+    padding: 2rem 1rem;
+  }
+
+  .home__side-block {
+    flex: 1;
+  }
+}
+
+/* En móvil el sidebar se apila en columna */
+@media (max-width: 560px) {
   .home__card { padding: 2.2rem 1.5rem 1.5rem; }
+
+  .home__sidebar {
+    flex-direction: column;
+  }
 }

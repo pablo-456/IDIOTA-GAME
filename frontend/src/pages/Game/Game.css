@@ -1933,3 +1933,32 @@
 .pile__expanded-entry:first-child .pile__expanded-pos {
   color: var(--gold);
 }
+
+/* ── Botón de volver ── */
+.game__finished-home-btn {
+  margin-top: 2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 2rem;
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius-btn, 6px);
+  font-family: var(--font-display, serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+ 
+.game__finished-home-btn:hover {
+  background: rgba(201, 168, 76, 0.08);
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+ 
+.game__finished-home-btn:active {
+  transform: translateY(0);
+}
