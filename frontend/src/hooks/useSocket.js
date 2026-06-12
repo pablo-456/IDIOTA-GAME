@@ -11,8 +11,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 //const SERVER_URL = 'http://localhost:3000';
-const SERVER_URL = 'https://wt61pzl2-3000.use2.devtunnels.ms';
-
+//const SERVER_URL = 'https://wt61pzl2-3000.use2.devtunnels.ms';
+const SERVER_URL = 'https://idiota-backend.onrender.com';
 /**
  * Singleton de socket: una sola instancia compartida en toda la app.
  * Se crea la primera vez que el hook se usa y se reutiliza en renders sucesivos.
