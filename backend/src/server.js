@@ -53,7 +53,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     // En producción, reemplaza '*' por el dominio real del frontend
-    origin: process.env.FRONTEND_URL || 'https://wt61pzl2-5173.use2.devtunnels.ms',
+    //origin: process.env.FRONTEND_URL || 'https://wt61pzl2-5173.use2.devtunnels.ms',
+    origin: process.env.FRONTEND_URL || 'https://idiota-game.vercel.app',
     methods: ['GET', 'POST'],
   },
 });
