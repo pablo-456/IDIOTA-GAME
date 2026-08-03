@@ -20,7 +20,7 @@ frontend/dist-ssr/
 frontend/out-tsc/
 *.local
 
-# Archivos del sistema operativo u editores de código (Opcional pero recomendado)
+# Archivos del sistema operativo u editores de código
 .DS_Store
 .vscode/
 .idea/

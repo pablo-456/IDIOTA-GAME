@@ -1,0 +1,10 @@
+---
+description: Restricciones estrictas para el control de versiones y uso de GitHub.
+globs: *
+---
+
+# Política de Seguridad y Control de Versiones (Git / GitHub)
+
+## 🚫 Restricción Estricta de GitHub
+- **Cero cambios automáticos en GitHub:** La IA **NUNCA** debe ejecutar comandos que interactúen con repositorios remotos (como `git push`, creación de PRs, sincronización con remotos, etc.) a menos que el usuario lo solicite de forma explícita y directa en el chat.
+- **Control Local:** Puedes ayudar a sugerir comandos de git locales (`git status`, `git add`, etc.) si se te pide, pero la decisión de subir código, hacer commits o interactuar con GitHub recae 100% en el desarrollador.

@@ -1,0 +1,179 @@
+/* Opponents row */
+
+/* ── Sección de rivales (HORIZONTAL arriba) ── */
+.playing__opponents {
+  display: flex;
+  flex-direction: row;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem 0.5rem;
+  overflow-x: auto;
+  flex-shrink: 0;
+  background: rgba(0,0,0,0.3);
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) transparent;
+  /* Barra elegante de scroll */
+  -webkit-overflow-scrolling: touch;
+}
+
+.playing__opponents::-webkit-scrollbar { height: 3px; }
+.playing__opponents::-webkit-scrollbar-track { background: transparent; }
+.playing__opponents::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+/* Tarjeta de rival individual */
+.opponent {
+  flex-shrink: 0;
+  min-width: 140px;
+  max-width: 200px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(201,168,76,0.1);
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.opponent::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,0.15), transparent);
+}
+
+.opponent--active {
+  border-color: var(--gold);
+  box-shadow: 0 0 20px rgba(201,168,76,0.25), inset 0 0 30px rgba(201,168,76,0.03);
+  background: rgba(201,168,76,0.05);
+}
+
+.opponent--active::before {
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  animation: top-shine 2s ease-in-out infinite;
+}
+
+@keyframes top-shine {
+  0%,100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+.opponent--saved {
+  border-color: rgba(34,197,94,0.3);
+  opacity: 0.65;
+}
+
+.opponent__header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.opponent__avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.78rem;
+  color: var(--ink);
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+.opponent--saved .opponent__avatar {
+  background: linear-gradient(135deg, #166534, #22c55e);
+}
+
+.opponent__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.opponent__name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--cream-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-display);
+}
+
+.opponent--active .opponent__name { color: var(--gold-light); }
+
+.opponent__turn-badge {
+  font-size: 0.6rem;
+  color: var(--gold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+.opponent__saved-badge {
+  font-size: 0.6rem;
+  color: var(--safe-green);
+  letter-spacing: 0.05em;
+}
+
+.opponent__card-count {
+  font-size: 0.72rem;
+  color: var(--gold-dim);
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+/* Cartas visibles del rival */
+.opponent__visibles {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+/* Cartas ocultas del rival */
+.opponent__hidden {
+  display: flex;
+  gap: 3px;
+}
+
+/* Separador entre visibles y ocultas */
+.opponent__divider {
+  height: 1px;
+  background: rgba(201,168,76,0.08);
+  margin: 1px 0;
+}
+
+@media (max-width: 600px) {
+  .playing__opponents {
+    padding: 0.4rem 0.6rem;
+    gap: 0.35rem;
+  }
+  .opponent {
+    min-width: 100px;
+    max-width: 140px;
+    padding: 0.35rem 0.45rem;
+    gap: 0.25rem;
+  }
+  .opponent__avatar {
+    width: 22px; height: 22px;
+    font-size: 0.65rem;
+  }
+  .opponent__name { font-size: 0.7rem; }
+  .opponent__card-count { font-size: 0.62rem; }
+  .opponent__turn-badge { font-size: 0.52rem; }
+  .opponent__hidden { display: none; }
+  .opponent__visibles { gap: 2px; }
+}
+@media (max-width: 420px) {
+  .opponent { min-width: 88px; max-width: 120px; }
+  .opponent__name { font-size: 0.62rem; }
+}

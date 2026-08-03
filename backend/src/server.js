@@ -52,11 +52,30 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    // En producción, reemplaza '*' por el dominio real del frontend
-    //origin: process.env.FRONTEND_URL || 'https://wt61pzl2-5173.use2.devtunnels.ms',
-    origin: process.env.FRONTEND_URL || 'https://idiota-game.vercel.app',
+    origin: (origin, callback) => {
+      // 1. Si no hay origen (como en llamadas servidor a servidor o Postman), lo permitimos
+      if (!origin) return callback(null, true);
+
+      // 2. Lista de orígenes o patrones permitidos
+      const allowedOrigins = [
+        process.env.FRONTEND_URL,
+        'https://idiota-game.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000'
+      ];
+
+      // 3. Verificamos si coincide exactamente o si es cualquier túnel de devtunnels
+      const isAllowed = allowedOrigins.includes(origin) || origin.endsWith('.devtunnels.ms');
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error('Bloqueado por CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
-  },
+    credentials: true
+  }
 });
 
 // Middleware Express básico

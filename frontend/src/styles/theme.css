@@ -1,0 +1,46 @@
+/**
+ * theme.css — Tokens y tipografías compartidas (casino IDIOTA).
+ * Importar una sola vez desde main.jsx.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap');
+
+:root {
+  --gold:           #c9a84c;
+  --gold-light:     #e8cc7a;
+  --gold-dim:       #8a6f2e;
+  --gold-glow:      rgba(201,168,76,0.35);
+  --felt:           #0a1a0c;
+  --felt-mid:       #0e2010;
+  --felt-light:     #163318;
+  --felt-table:     #0c1e0e;
+  --felt-stripe:    rgba(255,255,255,0.015);
+  --ink:            #060d07;
+  --cream:          #f7edd8;
+  --cream-dim:      #c8b896;
+  --cream-faint:    #8a7a60;
+  --red-suit:       #b52b2b;
+  --red-suit-light: #d93030;
+  --card-bg:        #fdfaf3;
+  --card-shadow:    rgba(0,0,0,0.55);
+  --active-glow:    rgba(201,168,76,0.6);
+  --safe-green:     #22c55e;
+  --safe-dim:       rgba(34,197,94,0.12);
+  --danger-red:     #ef4444;
+  --r:              12px;
+
+  --shadow-gold:    0 0 40px rgba(201, 168, 76, 0.25);
+  --shadow-deep:    0 20px 60px rgba(0, 0, 0, 0.8);
+  --radius-card:    16px;
+  --radius-btn:     6px;
+
+  --font-display:   'Playfair Display', Georgia, serif;
+  --font-body:      'EB Garamond', Georgia, serif;
+  --font-body-lobby: 'Crimson Pro', Georgia, serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}

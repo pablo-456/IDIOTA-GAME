@@ -1,0 +1,129 @@
+/* ════════════════════════════════════════════════════════
+   OVERLAY — Jugada especial (8 / Joker) — dorado/celestial
+════════════════════════════════════════════════════════ */
+
+.special-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 490;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.special-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  animation: reveal-fade-in 0.25s ease;
+}
+
+.special-overlay__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  animation: special-stage-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes special-stage-in {
+  from { transform: scale(0.75) translateY(20px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);    opacity: 1; }
+}
+
+/* Partículas doradas que explotan alrededor */
+.special-overlay__particles {
+  position: absolute;
+  inset: -60px;
+  pointer-events: none;
+}
+
+.special-overlay__particle {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold-light);
+  animation: particle-burst 0.9s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i) * 0.05s) both;
+  box-shadow: 0 0 6px var(--gold);
+}
+
+/* Alternar entre estrellas y círculos */
+.special-overlay__particle:nth-child(odd) {
+  width: 4px; height: 14px;
+  border-radius: 2px;
+  background: #e8f4ff;
+  box-shadow: 0 0 6px #a8d8ff;
+}
+
+@keyframes particle-burst {
+  0%   { transform: translate(-50%, -50%) rotate(calc(var(--i) * 30deg)) translateY(0)    scale(0); opacity: 1; }
+  60%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(calc(var(--i) * 30deg)) translateY(-90px) scale(1); opacity: 0; }
+}
+
+/* La carta especial — grande y brillante */
+.special-overlay__card-wrap {
+  filter: drop-shadow(0 0 24px rgba(201, 168, 76, 0.8)) drop-shadow(0 0 48px rgba(168, 216, 255, 0.4));
+  animation: card-glow-pulse 0.5s ease-in-out 0.3s infinite alternate;
+}
+
+@keyframes card-glow-pulse {
+  from { filter: drop-shadow(0 0 20px rgba(201,168,76,0.7)) drop-shadow(0 0 40px rgba(168,216,255,0.3)); }
+  to   { filter: drop-shadow(0 0 32px rgba(201,168,76,1.0)) drop-shadow(0 0 60px rgba(168,216,255,0.6)); }
+}
+
+.special-overlay__card {
+  width: 100px !important;
+  height: 144px !important;
+  border-radius: 14px !important;
+  cursor: default !important;
+  border: 2px solid var(--gold-light) !important;
+  box-shadow:
+    0 0 0 1px rgba(201,168,76,0.4),
+    0 16px 48px rgba(0,0,0,0.7) !important;
+}
+
+.special-overlay__card .card__value-tl  { font-size: 1.3rem !important; top: 9px !important; left: 11px !important; }
+.special-overlay__card .card__value-br  { font-size: 1.3rem !important; bottom: 9px !important; right: 11px !important; }
+.special-overlay__card .card__suit-center { font-size: 2.8rem !important; }
+.special-overlay__card .card__joker-icon  { font-size: 3.2rem !important; }
+
+.special-overlay__label {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold-light), #a8d8ff, var(--gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  animation: label-shimmer 1.5s linear infinite;
+  background-size: 200% auto;
+}
+
+@keyframes label-shimmer {
+  from { background-position: 0% center; }
+  to   { background-position: 200% center; }
+}
+
+.special-overlay__who {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  color: var(--cream-dim);
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.special-overlay__burned {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fbbf24;
+  text-shadow: 0 0 16px rgba(251, 191, 36, 0.6);
+  animation: reveal-verdict-in 0.3s ease 0.6s both;
+}

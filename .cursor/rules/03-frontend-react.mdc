@@ -1,0 +1,15 @@
+---
+description: Estándares de desarrollo para el Frontend, componentes de React, Vite y gestión de eventos de Socket en el cliente.
+alwaysApply: false
+---
+# Reglas del Frontend (React & Vite)
+
+## Estructura de Componentes
+- **Componentes Modulares:** Divide las vistas complejas en componentes limpios y reutilizables (por ejemplo, separar el lobby, la fase de configuración `SetupPhase`, y la mesa de juego activo).
+- **Manejo de Estados:** Utiliza `useState`, `useEffect` y `useCallback` de forma eficiente para evitar renderizados innecesarios, especialmente al manejar las selecciones de cartas y eventos de red.
+
+## Estilos y Experiencia de Usuario (UI/UX)
+- **Diseño Estilizado:** Mantén la identidad visual de casino oscuro y dorado (fondos verdes oscuros, tipografías elegantes, bordes dorados, sombras y efectos de elevación con `transform: translateY` para las cartas seleccionadas).
+- **Interactividad en Tiempo Real:** El cliente debe reflejar inmediatamente las respuestas del servidor y mantener actualizados los contadores (como el mazo restante y las cartas en mano de cada oponente).
+
+- **Stack:** React 18+ empaquetado con Vite (utiliza JSX moderno sin necesidad de `import React from 'react'`).

@@ -1,0 +1,17 @@
+---
+description: Estándares y directrices para el desarrollo del backend, Node.js y eventos de Socket.io en IDIOTA.
+globs: backend/**/*.js
+---
+
+# Reglas del Backend y WebSockets
+
+## Arquitectura y Principios
+- **Sin Base de Datos:** Todo el estado de las salas, jugadores, manos privadas, cartas visibles y la pila (`pile`) debe mantenerse y gestionarse de manera segura en la **memoria RAM del servidor** usando estructuras de JavaScript (objetos, mapas o arrays).
+- **Modularidad:** Mantén la lógica del juego separada de la capa de transporte de Socket.io (por ejemplo, usando modelos como `Game.js` para las reglas y `server.js` para los listeners y emisión de eventos).
+
+## Manejo de WebSockets (Socket.io)
+- Las acciones de los jugadores (como confirmar el setup, tirar cartas o recoger el pozo) deben validarse en el servidor antes de propagar el nuevo estado.
+- Utiliza la sincronización por salas (`io.to(roomId).emit(...)`) para asegurar que todos los participantes reciban el estado actualizado en tiempo real de forma idéntica.
+- Asegúrate de limpiar las salas o manejar desconexiones de jugadores para evitar fugas de memoria en el servidor.
+
+- **Entorno:** Node.js v18+ (utilizando módulos ES6 o CommonJS según el package.json).

@@ -1,0 +1,13 @@
+---
+description: Contexto general de la arquitectura y tecnologías del proyecto IDIOTA.
+globs: *
+---
+
+# Proyecto: IDIOTA (Juego de Cartas Multijugador)
+
+## Descripción
+Juego de cartas multijugador online en tiempo real (mono-repo con backend en Node.js y frontend en React). No utiliza base de datos persistente; todo el estado se maneja en la memoria RAM del servidor mediante WebSockets.
+
+## Estructura
+- `/backend`: Servidor Node.js con Socket.io.
+- `/frontend`: Aplicación en React con Vite y CSS modular.

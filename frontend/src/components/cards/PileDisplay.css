@@ -1,0 +1,191 @@
+/* ════════════════════════════════════════════════════════
+   PILA (PILE)
+════════════════════════════════════════════════════════ */
+.pile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pile__count-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: monospace;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+
+.pile__shadow {
+  position: absolute;
+  width: 62px; height: 90px;
+  border-radius: var(--r);
+  background: var(--card-bg);
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 2px 6px var(--card-shadow);
+}
+
+.pile__shadow--1 { transform: translate(-4px, 4px); z-index: -1; }
+.pile__shadow--2 { transform: translate(-8px, 8px); z-index: -2; opacity: 0.6; }
+
+.pile--empty {
+  width: 62px; height: 90px;
+  border-radius: var(--r);
+  border: 2px dashed rgba(201,168,76,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.pile__empty-icon { font-size: 1.2rem; color: rgba(201,168,76,0.2); }
+.pile__empty-label { font-size: 0.55rem; letter-spacing: 0.1em; color: rgba(201,168,76,0.25); text-transform: uppercase; }
+
+/* ════════════════════════════════════════════════════════
+   PILE — Vista expandida de cartas
+════════════════════════════════════════════════════════ */
+
+.pile-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pile {
+  cursor: pointer;
+}
+
+.pile--empty {
+  cursor: default;
+  left: 120%;
+}
+
+/* Botón explícito para ver cartas de la pila */
+.pile__view-btn {
+  margin-top: 0.4rem;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--gold-dim);
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  letter-spacing: 0.02em;
+}
+.pile__view-btn:hover {
+  color: var(--gold-light);
+  border-color: rgba(201,168,76,0.6);
+  background: rgba(0,0,0,0.75);
+}
+.pile__view-btn--open {
+  color: var(--gold-light);
+  border-color: rgba(201,168,76,0.5);
+}
+
+/* Panel expandido */
+.pile__expanded {
+  position: absolute;
+  bottom: calc(100% + 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(6, 20, 7, 0.97);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 12px;
+  padding: 0.6rem 0.75rem;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 230px;
+  z-index: 200;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 20px rgba(201,168,76,0.1);
+  animation: pile-expand-in 0.2s cubic-bezier(0.22,1,0.36,1);
+}
+
+@keyframes pile-expand-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1);    }
+}
+
+/* Flecha decorativa apuntando abajo */
+.pile__expanded::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px; height: 12px;
+  background: rgba(6, 20, 7, 0.97);
+  border-right: 1px solid rgba(201,168,76,0.3);
+  border-bottom: 1px solid rgba(201,168,76,0.3);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.pile__expanded-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  color: var(--gold-dim);
+  text-transform: uppercase;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(201,168,76,0.12);
+  margin-bottom: 0.4rem;
+}
+
+.pile__expanded-close {
+  background: none;
+  border: none;
+  color: var(--cream-faint);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0 0.2rem;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.pile__expanded-close:hover { color: var(--gold-light); }
+
+.pile__expanded-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow-y: auto;
+  max-height: 160px;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) transparent;
+}
+
+.pile__expanded-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pile__expanded-pos {
+  font-size: 0.62rem;
+  color: var(--cream-faint);
+  font-family: monospace;
+  min-width: 24px;
+  text-align: right;
+}
+
+/* La primera entrada (carta más reciente) tiene highlight */
+.pile__expanded-entry:first-child .pile__expanded-pos {
+  color: var(--gold);
+}

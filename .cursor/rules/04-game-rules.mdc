@@ -1,0 +1,16 @@
+---
+description: Reglas oficiales y de la casa del juego de cartas IDIOTA.
+globs: backend/src/models/**/*.js
+---
+
+# Reglas de Negocio de IDIOTA
+
+1. **Mazo:** Se compone de 104 cartas mezcladas con el algoritmo Fisher-Yates.
+2. **Fase de Setup:** Cada jugador recibe 12 cartas en total: elige 4 visibles para la mesa y 4 se quedan en su mano privada. Las otras 4 quedan en el mazo o según la distribución inicial.
+3. **Validación de Turnos:** Las cartas jugadas deben ser mayores o iguales a la última carta de la pila central (`pile`).
+4. **Cartas Especiales:**
+   - El **'2'** reinicia el valor de la mesa.
+   - El **'8'** y el **Joker** queman la mesa y otorgan un turno extra.
+5. **Reglas de Recogida (Cruciales):**
+   - **Penalización:** Si un jugador no puede responder, recoge todo el pozo a su mano. **Ese mismo jugador reinicia la ronda** abriendo la mesa vacía.
+   - **Recogida Voluntaria:** Un jugador puede decidir voluntariamente recoger el pozo en su turno por estrategia. Aplica la misma regla: su turno termina recogiéndose y él abre la nueva ronda.

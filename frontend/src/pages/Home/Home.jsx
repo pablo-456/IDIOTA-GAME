@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSocket } from '../../hooks/useSocket';
+import { useGameActions } from '../../hooks/useGameActions';
 import './Home.css';
 
 /* ── Enlace de donación ── */
@@ -13,7 +14,8 @@ const PATCH_NOTES = [
 ];
 
 export default function Home() {
-  const { emit, connected } = useSocket();
+  const { connected } = useSocket();
+  const { createRoom, joinRoom } = useGameActions();
   const [username, setUsername]   = useState('');
   const [roomCode, setRoomCode]   = useState('');
   const [error, setError]         = useState('');
@@ -35,16 +37,13 @@ export default function Home() {
   function handleCreate() {
     if (!validate()) return;
     setLoading('create');
-    emit('create_room', { username: username.trim() });
+    createRoom(username.trim());
   }
 
   function handleJoin() {
     if (!validate(true)) return;
     setLoading('join');
-    emit('join_room', {
-      username: username.trim(),
-      roomId:   roomCode.trim().toUpperCase(),
-    });
+    joinRoom(username.trim(), roomCode.trim().toUpperCase());
   }
 
   return (

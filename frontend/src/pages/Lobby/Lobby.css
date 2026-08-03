@@ -2,13 +2,7 @@
    Lobby.css — Sala de espera
    ═══════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap');
-
-/* ── Variables (deben coincidir con Home.css) ── */
-:root {
-  --gold:         #c9a84c;
-  --gold-light:   #e8cc7a;
-  --gold-dim:     #8a6f2e;
+.lobby {
   --felt:         #0d1f0f;
   --felt-mid:     #122818;
   --felt-light:   #1a3820;
@@ -16,11 +10,7 @@
   --cream:        #f5ead8;
   --cream-dim:    #b8a98a;
   --red-suit:     #c0392b;
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body:    'Crimson Pro', Georgia, serif;
-}
-
-.lobby {
+  --font-body:    var(--font-body-lobby);
   min-height: 100vh;
   background-color: var(--ink);
   background-image: radial-gradient(ellipse 80% 70% at 50% 40%, var(--felt) 0%, var(--ink) 100%);
@@ -138,7 +128,7 @@
 .lobby__code-hint {
   font-size: 0.82rem;
   font-style: italic;
-  color: #3a4a3b;
+  color: #89a58b;
   margin: 0;
   min-height: 1.2em;
   transition: color 0.3s;
@@ -306,7 +296,7 @@
 .lobby__player-waiting {
   font-size: 0.85rem;
   font-style: italic;
-  color: #2a3a2b;
+  color: #87a589;
 }
 
 .lobby__player-status { display: flex; align-items: center; }

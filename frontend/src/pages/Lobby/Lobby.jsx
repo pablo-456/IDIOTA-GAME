@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSocket } from '../../hooks/useSocket';
+import { useGameActions } from '../../hooks/useGameActions';
 import './Lobby.css';
 
 /**
@@ -11,7 +11,7 @@ import './Lobby.css';
  *   myId      {string}      — socket.id del jugador local
  */
 export default function Lobby({ roomId, gameState, myId }) {
-  const { emit } = useSocket();
+  const { startSetup } = useGameActions();
   const [copied, setCopied]   = useState(false);
   const [starting, setStarting] = useState(false);
 
@@ -32,7 +32,7 @@ export default function Lobby({ roomId, gameState, myId }) {
   function handleStart() {
     if (!canStart) return;
     setStarting(true);
-    emit('start_setup', { roomId });
+    startSetup(roomId);
   }
 
   // Si el servidor rechaza (error), reactivar el botón

@@ -1,0 +1,17 @@
+---
+description: Principios de arquitectura de software y diseño limpio (SOLID y Responsabilidad Única).
+globs: **/*.js, **/*.jsx
+---
+
+# Principios de Código y Responsabilidad Única (SOLID)
+
+## 1. Principio de Responsabilidad Única (SRP)
+- **Una razón para cambiar:** Cada módulo, clase, archivo o función debe tener una y solo una responsabilidad bien definida dentro del proyecto IDIOTA.
+- **Separación de Capas:** 
+  - La lógica del juego (reglas, validaciones, turnos) vive exclusivamente en el backend (`Game.js` o modelos de negocio).
+  - La manipulación de red y eventos vive en los listeners del servidor (`server.js`).
+  - La interfaz y renderizado viven en el frontend (`components/` y `pages/`). No mezcles lógica de red o de negocio pesada directamente en los componentes visuales de React.
+
+## 2. Principios SOLID Generales
+- **Abierto/Cerrado (OCP):** Las entidades de código deben estar abiertas para su extensión, pero cerradas para su modificación (facilita añadir nuevas reglas o cartas especiales sin romper el núcleo).
+- **Funciones Pequeñas:** Evita funciones kilométricas. Si una función hace múltiples cosas (calcula turnos, valida cartas y emite eventos), divídela en funciones de apoyo más pequeñas y limpias.

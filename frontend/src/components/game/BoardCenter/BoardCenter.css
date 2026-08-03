@@ -1,0 +1,119 @@
+/* ── Mesa central ── */
+.playing__board {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  position: relative;
+  min-height: 0;
+}
+
+/* Elipse de feltro — la mesa física */
+.playing__board::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(500px, 80vw);
+  height: min(180px, 30vw);
+  background: radial-gradient(ellipse, rgba(20,55,20,0.5) 0%, transparent 75%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.playing__board-inner {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Mazo */
+.playing__deck {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.playing__deck-stack {
+  position: relative;
+}
+
+.playing__deck-stack .card--facedown { position: relative; z-index: 1; }
+
+.playing__deck-count {
+  font-size: 0.7rem;
+  color: var(--cream-faint);
+  letter-spacing: 0.06em;
+}
+
+/* Separador */
+.playing__board-sep {
+  font-size: 1.2rem;
+  color: rgba(201,168,76,0.2);
+}
+
+/* Pila central */
+.playing__pile-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.playing__pickup-btn {
+  padding: 0.3rem 0.8rem;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 20px;
+  color: var(--gold-dim);
+  font-size: 0.72rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.playing__pickup-btn:hover {
+  background: rgba(201,168,76,0.15);
+  color: var(--gold-light);
+  border-color: var(--gold);
+}
+
+/* Banner de turno */
+.playing__turn-banner {
+  margin-top: 0.75rem;
+  padding: 0.35rem 1.2rem;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(201,168,76,0.12);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--cream-faint);
+  letter-spacing: 0.04em;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.playing__turn-banner--mine {
+  background: rgba(201,168,76,0.1);
+  border-color: var(--gold);
+  color: var(--gold-light);
+  box-shadow: 0 0 20px rgba(201,168,76,0.2);
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 600px) {
+  .playing__board { padding: 0.4rem 0.6rem; }
+  .playing__board-inner { gap: 1.2rem; }
+  .playing__turn-banner { font-size: 0.7rem; padding: 0.25rem 0.8rem; margin-top: 0.4rem; }
+  .playing__pickup-btn { font-size: 0.66rem; padding: 0.25rem 0.65rem; }
+}
