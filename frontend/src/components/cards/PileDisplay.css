@@ -96,12 +96,13 @@
   border-color: rgba(201,168,76,0.5);
 }
 
-/* Panel expandido */
+/* Panel expandido — desktop: a la derecha de la pila */
 .pile__expanded {
   position: absolute;
-  bottom: calc(100% + 24px);
-  left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  left: calc(125% + 12px);
+  bottom: auto;
+  transform: translateY(-50%);
   background: rgba(6, 20, 7, 0.97);
   border: 1px solid rgba(201,168,76,0.3);
   border-radius: 12px;
@@ -115,22 +116,49 @@
 }
 
 @keyframes pile-expand-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.95); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1);    }
+  from { opacity: 0; transform: translateY(-50%) translateX(8px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0)   scale(1);    }
 }
 
-/* Flecha decorativa apuntando abajo */
+/* Flecha apuntando a la izquierda (hacia la pila) */
 .pile__expanded::after {
   content: '';
   position: absolute;
-  bottom: -7px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  left: -7px;
+  bottom: auto;
   width: 12px; height: 12px;
   background: rgba(6, 20, 7, 0.97);
-  border-right: 1px solid rgba(201,168,76,0.3);
+  border-left: 1px solid rgba(201,168,76,0.3);
   border-bottom: 1px solid rgba(201,168,76,0.3);
-  transform: translateX(-50%) rotate(45deg);
+  border-right: none;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+/* Móvil: popover encima de la pila (comportamiento original) */
+@media (max-width: 600px) {
+  .pile__expanded {
+    top: auto;
+    bottom: calc(100% + 24px);
+    left: 50%;
+    transform: translateX(-50%);
+    animation: pile-expand-in-mobile 0.2s cubic-bezier(0.22,1,0.36,1);
+  }
+
+  @keyframes pile-expand-in-mobile {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.95); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1);    }
+  }
+
+  .pile__expanded::after {
+    top: auto;
+    bottom: -7px;
+    left: 50%;
+    border-left: none;
+    border-right: 1px solid rgba(201,168,76,0.3);
+    border-bottom: 1px solid rgba(201,168,76,0.3);
+    transform: translateX(-50%) rotate(45deg);
+  }
 }
 
 .pile__expanded-header {

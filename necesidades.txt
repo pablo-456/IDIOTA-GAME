@@ -1,0 +1,9 @@
+Si un jugador esta en la fase de cartas visibles y recoge a su derecha el juego muestra "Mis visibles" todas las cartas actuales, en vez de las dos elegidas inicialemnte, Los demas jugadores solo ven las elegidas al inicio.
+
+Ver las cartas en la mesa debe aparecer a la derecha como rectangulo solo para jugadores en pc
+
+Cosiderar quitar "turno" en mitad de pantalla
+
+Cambiar el fondo de juego
+
+Añadir Overlay de reaparticion de cartas

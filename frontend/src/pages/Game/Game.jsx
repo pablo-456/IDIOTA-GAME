@@ -113,7 +113,9 @@ export default function Game({ gameState, myId, roomId }) {
             </div>
 
             {!amISaved && (
-              <MyVisiblesPanel myHand={gameState?.myHand} />
+              <MyVisiblesPanel
+                visibles={gameState?.players?.find((p) => p.id === myId)?.cartasVisibles ?? []}
+              />
             )}
           </div>
         )}

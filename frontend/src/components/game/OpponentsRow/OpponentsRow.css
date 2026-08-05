@@ -24,7 +24,7 @@
 .opponent {
   flex-shrink: 0;
   min-width: 140px;
-  max-width: 200px;
+  max-width: 210px;
   background: rgba(0,0,0,0.35);
   border: 1px solid rgba(201,168,76,0.1);
   border-radius: 10px;
@@ -126,7 +126,7 @@
 }
 
 .opponent__card-count {
-  font-size: 0.72rem;
+  font-size: 0.90rem;
   color: var(--gold-dim);
   font-family: monospace;
   white-space: nowrap;
@@ -136,7 +136,7 @@
 .opponent__visibles {
   display: flex;
   gap: 3px;
-  flex-wrap: wrap;
+  margin-bottom: 5px;
 }
 
 /* Cartas ocultas del rival */

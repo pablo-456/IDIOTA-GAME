@@ -66,6 +66,8 @@ export default function PlayingPhase({ gameState, myId, onPlayCards, onPickUp })
   const canPlay = selectedCards.size > 0 && isMyTurn;
   const currentName =
     gameState.players?.find((p) => p.id === gameState.currentPlayerId)?.username ?? '…';
+  const myPublicVisibles =
+    gameState.players?.find((p) => p.id === myId)?.cartasVisibles ?? [];
 
   return (
     <div className="playing">
@@ -94,11 +96,11 @@ export default function PlayingPhase({ gameState, myId, onPlayCards, onPickUp })
           </span>
         </div>
 
-        {myHand?.cartasVisibles?.length > 0 && (
+        {myPublicVisibles.length > 0 && (
           <div className="playing__hand-mobile-visibles">
             <span className="playing__hand-mobile-visibles-label">👁 Visibles</span>
             <div className="playing__hand-mobile-visibles-cards">
-              {myHand.cartasVisibles.map((card) => (
+              {myPublicVisibles.map((card) => (
                 <Card key={card.id} card={card} small disabled />
               ))}
             </div>

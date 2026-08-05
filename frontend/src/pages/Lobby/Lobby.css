@@ -100,7 +100,7 @@
 
 .lobby__code-text {
   font-family: var(--font-display);
-  font-size: clamp(2.4rem, 8vw, 3.2rem);
+  font-size: clamp(2.4rem, 8vw, 2.4rem);
   font-weight: 900;
   letter-spacing: 0.05em;
   color: var(--gold-light);

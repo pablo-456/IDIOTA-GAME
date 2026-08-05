@@ -2,11 +2,10 @@ import Card from '../../cards/Card';
 import './MyVisiblesPanel.css';
 
 /**
- * Panel lateral con las cartas visibles propias durante PLAYING.
+ * Panel lateral con las cartas visibles públicas (las elegidas en SETUP).
+ * No usa myHand.cartasVisibles, que puede incluir cartas recogidas.
  */
-export default function MyVisiblesPanel({ myHand }) {
-  const visibles = myHand?.cartasVisibles ?? [];
-
+export default function MyVisiblesPanel({ visibles = [] }) {
   if (visibles.length === 0) return null;
 
   return (

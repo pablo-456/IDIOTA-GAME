@@ -30,7 +30,7 @@ const getSocketUrl = () => {
     return 'http://localhost:3000';
   }
 
-  // 3. Si estás en Producción (Vercel)
+  // 3. Si estás en Producción (Render)
   return 'https://idiota-backend.onrender.com';
 };
 
