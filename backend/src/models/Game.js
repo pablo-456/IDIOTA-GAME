@@ -650,7 +650,9 @@ class Game {
         isReady:              p.isReady,
         isSaved:              p.isSaved,
         cartasVisibles:       p.cartasVisiblesPublicas, // rivales solo ven las 4 originales
-        manoPrivadaCount:     p.manoPrivada.length,
+        // Incluye cartas recogidas en fase visibles (están en cartasVisibles pero no en públicas)
+        manoPrivadaCount:     p.manoPrivada.length
+          + Math.max(0, p.cartasVisibles.length - p.cartasVisiblesPublicas.length),
         cartasOcultasCount:   p.cartasOcultas.length,
       })),
     };

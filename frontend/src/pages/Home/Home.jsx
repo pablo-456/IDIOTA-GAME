@@ -6,6 +6,13 @@ import './Home.css';
 /* ── Enlace de donación ── */
 const DONATION_URL = 'https://ko-fi.com/idiotagame';
 
+/* Palos flotantes de fondo */
+const BG_SUITS = [
+  { s: '♠', i: 0 }, { s: '♥', i: 1 }, { s: '♦', i: 2 }, { s: '♣', i: 3 },
+  { s: '♠', i: 4 }, { s: '♥', i: 5 }, { s: '♣', i: 6 }, { s: '♦', i: 7 },
+  { s: '♠', i: 8 }, { s: '♥', i: 9 },
+];
+
 /* ── Notas de la versión ── */
 const PATCH_NOTES = [
   'Beta 1.0 disponible — puede haber bichos sueltos 🐛',
@@ -50,8 +57,14 @@ export default function Home() {
     <div className="home">
       {/* Patrón de fondo decorativo */}
       <div className="home__bg-pattern" aria-hidden="true">
-        {['♠','♥','♦','♣'].map((s, i) => (
-          <span key={i} className="home__suit" style={{ '--i': i }}>{s}</span>
+        {BG_SUITS.map(({ s, i }) => (
+          <span
+            key={i}
+            className={`home__suit home__suit--${i}`}
+            style={{ '--i': i }}
+          >
+            {s}
+          </span>
         ))}
       </div>
 

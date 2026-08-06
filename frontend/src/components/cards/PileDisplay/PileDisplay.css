@@ -135,8 +135,35 @@
   transform: translateY(-50%) rotate(45deg);
 }
 
-/* Móvil: popover encima de la pila (comportamiento original) */
+/* Móvil: popover encima de la pila + pila más compacta */
 @media (max-width: 600px) {
+  .pile .card {
+    width: 48px;
+    height: 70px;
+  }
+  .pile .card .card__suit-center { font-size: 1.25rem; }
+  .pile .card .card__value-tl,
+  .pile .card .card__value-br { font-size: 0.68rem; }
+  .pile .card .card__joker-icon { font-size: 1.2rem; }
+  .pile .card .card__back-pattern { font-size: 1.1rem; }
+
+  .pile__shadow,
+  .pile--empty {
+    width: 48px;
+    height: 70px;
+  }
+
+  .pile__count-badge {
+    width: 18px;
+    height: 18px;
+    font-size: 0.55rem;
+    top: -8px;
+    right: -8px;
+  }
+
+  .pile__shadow--1 { transform: translate(-3px, 3px); }
+  .pile__shadow--2 { transform: translate(-6px, 6px); }
+
   .pile__expanded {
     top: auto;
     bottom: calc(100% + 24px);

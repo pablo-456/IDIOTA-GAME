@@ -1,9 +1,15 @@
-Si un jugador esta en la fase de cartas visibles y recoge a su derecha el juego muestra "Mis visibles" todas las cartas actuales, en vez de las dos elegidas inicialemnte, Los demas jugadores solo ven las elegidas al inicio.
+-Al recojer en la fase de visibles el contador de 
+cartas individual no se actualiza para los demas jugadores - CORREGIDO
+REVISAR
 
-Ver las cartas en la mesa debe aparecer a la derecha como rectangulo solo para jugadores en pc
+-Boton en el header para pantalla completa
 
-Cosiderar quitar "turno" en mitad de pantalla
+-Musica
 
-Cambiar el fondo de juego
+-Salas Publicas
 
-Añadir Overlay de reaparticion de cartas
+- Contenedor de jugador en turno se sobrepone encima del codigo en moviles 
+en la parte superior, quitarlo no hace falta para moviles.
+-En la partida, cuadro de jugadores, muestran solo 3 de las 4 cartas visibles,
+tambien deberian mostrar las 4 no visibles que tiene cada jugador.
+-Añadir el poder ver los usuarios que ya se salvaron en moviles

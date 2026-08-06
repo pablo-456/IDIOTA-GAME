@@ -90,4 +90,9 @@
   .playing__board { padding: 0.4rem 0.6rem; }
   .playing__board-inner { gap: 1.2rem; }
   .playing__pickup-btn { font-size: 0.66rem; padding: 0.25rem 0.65rem; }
+  .playing__deck-stack .card {
+    width: 48px;
+    height: 70px;
+  }
+  .playing__deck-stack .card .card__back-pattern { font-size: 1.1rem; }
 }
