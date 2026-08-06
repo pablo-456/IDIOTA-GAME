@@ -1,0 +1,241 @@
+/* ════════════════════════════════════════════════════════
+   DealOverlay — Reparto teatral (SETUP)
+   Secuencia ~4.2s: prep → 4 ocultas → 8 deal → flip → done
+════════════════════════════════════════════════════════ */
+
+.deal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 520;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: var(--font-body);
+}
+
+.deal-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  animation: deal-fade-in 0.35s ease both;
+}
+
+.deal-overlay__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem;
+  max-width: 100%;
+  animation: deal-stage-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.deal-overlay__dealer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  animation:
+    deal-hand-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both,
+    deal-fade-out 0.35s ease 3.85s forwards;
+}
+
+.deal-overlay__hand {
+  font-size: 2.8rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 18px rgba(201, 168, 76, 0.45));
+  animation: deal-hand-bob 1.2s ease-in-out 0.4s infinite alternate;
+}
+
+.deal-overlay__label {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+  margin: 0;
+}
+
+.deal-overlay__row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.deal-overlay__row-label {
+  font-size: 0.65rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cream-faint);
+  opacity: 0;
+  animation: deal-fade-in 0.3s ease 0.25s both;
+}
+
+.deal-overlay__cards {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  perspective: 800px;
+}
+
+.deal-overlay__card-shell {
+  width: 56px;
+  height: 82px;
+  cursor: default !important;
+  pointer-events: none;
+}
+
+.deal-overlay__card-shell .card__back-pattern {
+  font-size: 1.35rem;
+}
+
+.deal-overlay__fly .card,
+.deal-overlay__face .card {
+  pointer-events: none;
+  cursor: default !important;
+}
+
+/* ── Vuelo de las 4 ocultas (inicio ~0.3s) ── */
+.deal-overlay__fly--hidden {
+  opacity: 0;
+  animation: deal-fly-down 0.5s cubic-bezier(0.22, 1, 0.36, 1)
+    calc(0.3s + var(--i) * 0.12s) both;
+}
+
+/* ── Vuelo de las 8 de elección (inicio ~1.15s) ── */
+.deal-overlay__fly--choice {
+  opacity: 0;
+  animation: deal-fly-down 0.45s cubic-bezier(0.22, 1, 0.36, 1)
+    calc(1.15s + var(--i) * 0.1s) both;
+}
+
+/* ── Flip 3D (inicio ~2.4s) ── */
+.deal-overlay__flip {
+  width: 56px;
+  height: 82px;
+  perspective: 600px;
+}
+
+.deal-overlay__flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: deal-flip 0.5s cubic-bezier(0.22, 1, 0.36, 1)
+    calc(2.4s + var(--i) * 0.15s) both;
+}
+
+.deal-overlay__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deal-overlay__face--front {
+  transform: rotateY(180deg);
+}
+
+.deal-overlay__face--front .card {
+  width: 56px;
+  height: 82px;
+}
+
+/* Fade out del dealer al final — ver animación combinada en .deal-overlay__dealer */
+
+@keyframes deal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes deal-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes deal-stage-in {
+  from { transform: translateY(16px) scale(0.96); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes deal-hand-in {
+  from { transform: translateY(-20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes deal-hand-bob {
+  from { transform: translateY(0); }
+  to   { transform: translateY(4px); }
+}
+
+@keyframes deal-fly-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-120px) rotate(-18deg) scale(0.7);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(6px) rotate(4deg) scale(1.04);
+  }
+  85% {
+    transform: translateY(-3px) rotate(-2deg) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes deal-flip {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(180deg); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .deal-overlay__hand { font-size: 2.2rem; }
+  .deal-overlay__label { font-size: 0.78rem; letter-spacing: 0.1em; }
+  .deal-overlay__cards { gap: 0.28rem; }
+
+  .deal-overlay__card-shell,
+  .deal-overlay__flip,
+  .deal-overlay__face--front .card {
+    width: 44px;
+    height: 64px;
+  }
+
+  .deal-overlay__flip {
+    width: 44px;
+    height: 64px;
+  }
+
+  .deal-overlay__card-shell .card__back-pattern {
+    font-size: 1.05rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .deal-overlay__card-shell,
+  .deal-overlay__flip,
+  .deal-overlay__face--front .card {
+    width: 38px;
+    height: 55px;
+  }
+
+  .deal-overlay__flip {
+    width: 38px;
+    height: 55px;
+  }
+}

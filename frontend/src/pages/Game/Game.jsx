@@ -5,9 +5,9 @@ import SetupPhase from '../../components/game/SetupPhase/SetupPhase';
 import PlayingPhase from '../../components/game/PlayingPhase/PlayingPhase';
 import SpectatorView from '../../components/game/SpectatorView/SpectatorView';
 import MyVisiblesPanel from '../../components/game/MyVisiblesPanel/MyVisiblesPanel';
-import SpecialPlayOverlay from '../../components/game/overlays/SpecialPlayOverlay/SpecialPlayOverlay';
-import CrownOverlay from '../../components/game/overlays/CrownOverlay/CrownOverlay';
-import CardRevealOverlay from '../../components/game/overlays/CardRevealOverlay/CardRevealOverlay';
+import SpecialPlayOverlay from '../../components/overlays/SpecialPlayOverlay/SpecialPlayOverlay';
+import CrownOverlay from '../../components/overlays/CrownOverlay/CrownOverlay';
+import CardRevealOverlay from '../../components/overlays/CardRevealOverlay/CardRevealOverlay';
 import './Game.css';
 
 /**
@@ -62,7 +62,7 @@ export default function Game({ gameState, myId, roomId }) {
         </div>
 
         <div className="game__topbar-right">
-          <span className="game__deck-info">🃏 {gameState?.deckRemaining ?? '—'}</span>
+          <span className="game__deck-info">Cartas restantes: 🃏 {gameState?.deckRemaining ?? '—'}</span>
         </div>
       </header>
 

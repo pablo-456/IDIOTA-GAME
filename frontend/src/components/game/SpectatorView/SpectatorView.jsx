@@ -8,8 +8,6 @@ import './SpectatorView.css';
 export default function SpectatorView({ gameState, myId }) {
   const pile = gameState.pile ?? [];
   const opponents = (gameState.players ?? []).filter((p) => p.id !== myId && !p.isSaved);
-  const currentName =
-    gameState.players?.find((p) => p.id === gameState.currentPlayerId)?.username ?? '…';
 
   return (
     <div className="spectator">
@@ -22,7 +20,6 @@ export default function SpectatorView({ gameState, myId }) {
       <BoardCenter
         deckRemaining={gameState.deckRemaining}
         pile={pile}
-        turnBanner={`Turno de ${currentName}`}
       />
 
       <div className="spectator__hand-placeholder">

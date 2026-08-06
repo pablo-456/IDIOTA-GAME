@@ -1,4 +1,4 @@
-import Card from '../../cards/Card';
+import Card from '../../cards/Card/Card';
 import './OpponentsRow.css';
 
 /**

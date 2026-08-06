@@ -1,4 +1,4 @@
-import { isRedSuit, isSpecialCard, cardLabel } from '../../constants/cardRules';
+import { isRedSuit, isSpecialCard, cardLabel } from '../../../constants/cardRules';
 import './Card.css';
 
 /**

@@ -29,6 +29,7 @@
   gap: 2.5rem;
   position: relative;
   z-index: 1;
+  margin-bottom: -40px;
 }
 
 /* Mazo */
@@ -85,35 +86,8 @@
   border-color: var(--gold);
 }
 
-/* Banner de turno */
-.playing__turn-banner {
-  margin-top: 0.75rem;
-  padding: 0.35rem 1.2rem;
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(201,168,76,0.12);
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-style: italic;
-  color: var(--cream-faint);
-  letter-spacing: 0.04em;
-  text-align: center;
-  position: relative;
-  z-index: 1;
-}
-
-.playing__turn-banner--mine {
-  background: rgba(201,168,76,0.1);
-  border-color: var(--gold);
-  color: var(--gold-light);
-  box-shadow: 0 0 20px rgba(201,168,76,0.2);
-  font-style: normal;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-}
-
 @media (max-width: 600px) {
   .playing__board { padding: 0.4rem 0.6rem; }
   .playing__board-inner { gap: 1.2rem; }
-  .playing__turn-banner { font-size: 0.7rem; padding: 0.25rem 0.8rem; margin-top: 0.4rem; }
   .playing__pickup-btn { font-size: 0.66rem; padding: 0.25rem 0.65rem; }
 }

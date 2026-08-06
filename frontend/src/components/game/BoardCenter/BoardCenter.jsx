@@ -1,4 +1,4 @@
-import PileDisplay from '../../cards/PileDisplay';
+import PileDisplay from '../../cards/PileDisplay/PileDisplay';
 import './BoardCenter.css';
 
 /**
@@ -7,8 +7,6 @@ import './BoardCenter.css';
 export default function BoardCenter({
   deckRemaining,
   pile,
-  turnBanner,
-  turnBannerMine = false,
   onPickUp,
   showPickUp = false,
 }) {
@@ -34,10 +32,6 @@ export default function BoardCenter({
             </button>
           )}
         </div>
-      </div>
-
-      <div className={`playing__turn-banner${turnBannerMine ? ' playing__turn-banner--mine' : ''}`}>
-        {turnBanner}
       </div>
     </section>
   );

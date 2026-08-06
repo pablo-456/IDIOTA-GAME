@@ -1,13 +1,15 @@
 import { useState, useCallback } from 'react';
-import Card from '../../cards/Card';
+import Card from '../../cards/Card/Card';
+import DealOverlay from '../../overlays/DealOverlay/DealOverlay';
 import './SetupPhase.css';
 
 /**
- * Fase SETUP: elegir 4 cartas visibles.
+ * Fase SETUP: animación de reparto y luego elegir 4 cartas visibles.
  * Emite vía onConfirmSetup — sin acceso directo al socket.
  */
 export default function SetupPhase({ myHand, isMeReady, onConfirmSetup }) {
   const [selected, setSelected] = useState(new Set());
+  const [dealDone, setDealDone] = useState(false);
 
   const toggleCard = useCallback((id) => {
     setSelected((prev) => {
@@ -21,6 +23,8 @@ export default function SetupPhase({ myHand, isMeReady, onConfirmSetup }) {
     });
   }, []);
 
+  const pool = myHand?.manoPrivada ?? [];
+
   if (isMeReady) {
     return (
       <div className="setup-phase__waiting" style={{ textAlign: 'center', padding: '2rem' }}>
@@ -32,7 +36,15 @@ export default function SetupPhase({ myHand, isMeReady, onConfirmSetup }) {
     );
   }
 
-  const pool = myHand?.manoPrivada ?? [];
+  // Overlay de reparto antes de poder seleccionar
+  if (!dealDone && pool.length === 8) {
+    return (
+      <DealOverlay
+        choiceCards={pool}
+        onDone={() => setDealDone(true)}
+      />
+    );
+  }
 
   const handleConfirm = () => {
     if (selected.size !== 4) return;

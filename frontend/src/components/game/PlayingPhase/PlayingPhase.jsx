@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Card from '../../cards/Card';
+import Card from '../../cards/Card/Card';
 import OpponentsRow from '../OpponentsRow/OpponentsRow';
 import BoardCenter from '../BoardCenter/BoardCenter';
 import { getPileTopPower, canPlayAgainstPile } from '../../../constants/cardRules';
@@ -64,8 +64,6 @@ export default function PlayingPhase({ gameState, myId, onPlayCards, onPickUp })
   };
 
   const canPlay = selectedCards.size > 0 && isMyTurn;
-  const currentName =
-    gameState.players?.find((p) => p.id === gameState.currentPlayerId)?.username ?? '…';
   const myPublicVisibles =
     gameState.players?.find((p) => p.id === myId)?.cartasVisibles ?? [];
 
@@ -76,12 +74,6 @@ export default function PlayingPhase({ gameState, myId, onPlayCards, onPickUp })
       <BoardCenter
         deckRemaining={gameState.deckRemaining}
         pile={pile}
-        turnBanner={
-          isMyTurn
-            ? '✦ Es tu turno — elige carta(s) para jugar'
-            : `Turno de ${currentName}`
-        }
-        turnBannerMine={isMyTurn}
         showPickUp={pile.length > 0 && isMyTurn}
         onPickUp={handlePickUp}
       />

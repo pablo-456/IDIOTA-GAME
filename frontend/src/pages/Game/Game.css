@@ -93,6 +93,9 @@
 }
 
 .game__phase-badge {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(0,0,0,0.4);
   border: 1px solid rgba(201,168,76,0.2);
   border-radius: 20px;
@@ -102,6 +105,8 @@
   font-style: italic;
   letter-spacing: 0.04em;
   transition: all 0.3s;
+  white-space: nowrap;
+  z-index: 1;
 }
 
 .game__phase-badge--myturn {
@@ -118,7 +123,8 @@
 }
 
 .game__deck-info {
-  font-size: 0.8rem;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: var(--gold-dim);
   display: flex;
   align-items: center;
