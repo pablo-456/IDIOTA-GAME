@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSocket } from './useSocket';
 import { SERVER_EVENTS } from '../constants/socketEvents';
 import { isBurnCard } from '../constants/cardRules';
+import { SFX } from '../audio/sfx';
 
 /**
  * Listeners in-game (FX y game_over local).
@@ -19,6 +20,7 @@ export function useGameEvents() {
     const timeouts = [];
 
     const offSaved = on(SERVER_EVENTS.PLAYER_SAVED, () => {
+      SFX.playerSaved();
       setSavedNotif(true);
       const t = setTimeout(() => setSavedNotif(false), 6000);
       timeouts.push(t);
@@ -28,18 +30,21 @@ export function useGameEvents() {
       const { card, mustPickUp } = data;
       const isSpecial = isBurnCard(card.value);
       if (!mustPickUp && isSpecial) return;
+      SFX.reveal();
       setRevealEvent(data);
       const t = setTimeout(() => setRevealEvent(null), 3200);
       timeouts.push(t);
     });
 
     const offSpecial = on(SERVER_EVENTS.SPECIAL_PLAY, (data) => {
+      SFX.specialBurn();
       setSpecialEvent(data);
       const t = setTimeout(() => setSpecialEvent(null), 2200);
       timeouts.push(t);
     });
 
     const offGameOver = on(SERVER_EVENTS.GAME_OVER, (data) => {
+      SFX.gameOver();
       setGameOverData(data);
     });
 

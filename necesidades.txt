@@ -1,15 +1,3 @@
--Al recojer en la fase de visibles el contador de 
-cartas individual no se actualiza para los demas jugadores - CORREGIDO
-REVISAR
-
--Boton en el header para pantalla completa
-
--Musica
+-Musica de suspenso en la ultima fase-posiblemente
 
 -Salas Publicas
-
-- Contenedor de jugador en turno se sobrepone encima del codigo en moviles 
-en la parte superior, quitarlo no hace falta para moviles.
--En la partida, cuadro de jugadores, muestran solo 3 de las 4 cartas visibles,
-tambien deberian mostrar las 4 no visibles que tiene cada jugador.
--Añadir el poder ver los usuarios que ya se salvaron en moviles

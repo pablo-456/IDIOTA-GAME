@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Card from '../../cards/Card/Card';
+import { SFX } from '../../../audio/sfx';
 import './DealOverlay.css';
 
 /** Timing total de la secuencia (ms) — debe coincidir con delays CSS */
@@ -21,7 +22,20 @@ export default function DealOverlay({ choiceCards = [], onDone }) {
       doneRef.current = true;
       onDoneRef.current?.();
     }, DEAL_TOTAL_MS);
-    return () => clearTimeout(t);
+
+    // SFX alineados con delays CSS del reparto
+    const dealTimers = [];
+    for (let i = 0; i < 4; i++) {
+      dealTimers.push(setTimeout(() => SFX.deal(), 300 + i * 120));
+    }
+    for (let i = 0; i < 8; i++) {
+      dealTimers.push(setTimeout(() => SFX.deal(), 1150 + i * 100));
+    }
+
+    return () => {
+      clearTimeout(t);
+      dealTimers.forEach(clearTimeout);
+    };
   }, []);
 
   const cards = choiceCards.slice(0, 8);

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGameActions } from '../../hooks/useGameActions';
+import { useAudio } from '../../hooks/useAudio';
+import MuteButton from '../../components/ui/MuteButton/MuteButton';
 import './Lobby.css';
 
 /**
@@ -12,6 +14,7 @@ import './Lobby.css';
  */
 export default function Lobby({ roomId, gameState, myId }) {
   const { startSetup } = useGameActions();
+  const { unlock, startMusic } = useAudio();
   const [copied, setCopied]   = useState(false);
   const [starting, setStarting] = useState(false);
 
@@ -21,6 +24,15 @@ export default function Lobby({ roomId, gameState, myId }) {
 
   // Indicador de "suficientes jugadores" para el host
   const missingPlayers = Math.max(0, 3 - players.length);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await unlock();
+      if (!cancelled) await startMusic();
+    })();
+    return () => { cancelled = true; };
+  }, [unlock, startMusic]);
 
   function handleCopy() {
     navigator.clipboard.writeText(roomId).then(() => {
@@ -42,6 +54,7 @@ export default function Lobby({ roomId, gameState, myId }) {
 
   return (
     <div className="lobby">
+      <MuteButton floating />
       <div className="lobby__bg-pattern" aria-hidden="true" />
 
       <div className="lobby__wrapper">

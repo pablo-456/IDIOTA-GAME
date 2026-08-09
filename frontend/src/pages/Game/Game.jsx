@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameEvents } from '../../hooks/useGameEvents';
 import { useGameActions } from '../../hooks/useGameActions';
+import { useAudio } from '../../hooks/useAudio';
 import SetupPhase from '../../components/game/SetupPhase/SetupPhase';
 import PlayingPhase from '../../components/game/PlayingPhase/PlayingPhase';
 import SpectatorView from '../../components/game/SpectatorView/SpectatorView';
@@ -8,12 +9,13 @@ import MyVisiblesPanel from '../../components/game/MyVisiblesPanel/MyVisiblesPan
 import SpecialPlayOverlay from '../../components/overlays/SpecialPlayOverlay/SpecialPlayOverlay';
 import CrownOverlay from '../../components/overlays/CrownOverlay/CrownOverlay';
 import CardRevealOverlay from '../../components/overlays/CardRevealOverlay/CardRevealOverlay';
+import StartRouletteOverlay from '../../components/overlays/StartRouletteOverlay/StartRouletteOverlay';
 import './Game.css';
 
 /**
  * Game — Shell de partida: topbar, overlays y composición por fase.
  */
-export default function Game({ gameState, myId, roomId }) {
+export default function Game({ gameState, myId, roomId, firstPlayer = null, onFirstPlayerDone }) {
   const status = gameState?.status ?? 'SETUP';
   const isMyTurn = gameState?.currentPlayerId === myId;
   const currentId = gameState?.currentPlayerId;
@@ -23,8 +25,68 @@ export default function Game({ gameState, myId, roomId }) {
 
   const { savedNotif, revealEvent, specialEvent, gameOverData } = useGameEvents();
   const { confirmSetup, playTurn, pickUpPile } = useGameActions();
+  const { muted, toggleMute, unlock, play, startMusic } = useAudio();
 
   const [crownDone, setCrownDone] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [rouletteDone, setRouletteDone] = useState(false);
+  const wasMyTurn = useRef(false);
+
+  const showRoulette = !!firstPlayer?.id && !rouletteDone && status === 'PLAYING';
+
+  useEffect(() => {
+    // Nueva partida / nuevo firstPlayer → permitir mostrar ruleta otra vez
+    if (firstPlayer?.id) setRouletteDone(false);
+  }, [firstPlayer?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await unlock();
+      if (!cancelled) await startMusic();
+    })();
+    return () => { cancelled = true; };
+  }, [unlock, startMusic]);
+
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    // No avisar turno mientras gira la ruleta de inicio
+    if (showRoulette) return;
+    if (isMyTurn && status === 'PLAYING' && !amISaved && !wasMyTurn.current) {
+      play('myTurn');
+    }
+    wasMyTurn.current = isMyTurn && status === 'PLAYING' && !amISaved;
+  }, [isMyTurn, status, amISaved, play, showRoulette]);
+
+  const handlePlayCards = (cardIds) => {
+    play('playCard');
+    playTurn(roomId, cardIds);
+  };
+
+  const handlePickUp = () => {
+    play('pickup');
+    pickUpPile(roomId, true);
+  };
+
+  const handleRouletteDone = () => {
+    setRouletteDone(true);
+    onFirstPlayerDone?.();
+  };
 
   const loserId = gameOverData?.loserId ?? gameState?.loserId ?? null;
   const loserName = gameOverData?.loserName
@@ -34,6 +96,13 @@ export default function Game({ gameState, myId, roomId }) {
 
   return (
     <div className="game">
+      <StartRouletteOverlay
+        visible={showRoulette}
+        players={gameState?.players ?? []}
+        winnerId={firstPlayer?.id}
+        myId={myId}
+        onDone={handleRouletteDone}
+      />
       <CardRevealOverlay event={revealEvent} myId={myId} />
       <SpecialPlayOverlay event={specialEvent} myId={myId} />
       <CrownOverlay
@@ -47,6 +116,15 @@ export default function Game({ gameState, myId, roomId }) {
         <div className="game__topbar-left">
           <span className="game__logo">♣ IDIOTA</span>
           <span className="game__room-code">{roomId}</span>
+          <button
+            type="button"
+            className={`game__mute-btn${muted ? ' game__mute-btn--muted' : ''}`}
+            onClick={() => { unlock(); toggleMute(); }}
+            title={muted ? 'Activar sonido' : 'Silenciar'}
+            aria-label={muted ? 'Activar sonido' : 'Silenciar'}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
         </div>
 
         <div className={`game__phase-badge${isMyTurn && status === 'PLAYING' ? ' game__phase-badge--myturn' : ''}`}>
@@ -62,7 +140,19 @@ export default function Game({ gameState, myId, roomId }) {
         </div>
 
         <div className="game__topbar-right">
-          <span className="game__deck-info">Cartas restantes: 🃏 {gameState?.deckRemaining ?? '—'}</span>
+          <button
+            type="button"
+            className="game__fullscreen-btn"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+            aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+          >
+            {isFullscreen ? '❐' : '⛶'}
+          </button>
+          <span className="game__deck-info">
+            <span className="game__deck-info-label">Cartas restantes: </span>
+            🃏 {gameState?.deckRemaining ?? '—'}
+          </span>
         </div>
       </header>
 
@@ -106,8 +196,8 @@ export default function Game({ gameState, myId, roomId }) {
                 <PlayingPhase
                   gameState={gameState}
                   myId={myId}
-                  onPlayCards={(cardIds) => playTurn(roomId, cardIds)}
-                  onPickUp={() => pickUpPile(roomId, true)}
+                  onPlayCards={handlePlayCards}
+                  onPickUp={handlePickUp}
                 />
               )}
             </div>

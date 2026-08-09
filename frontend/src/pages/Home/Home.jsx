@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../../hooks/useSocket';
 import { useGameActions } from '../../hooks/useGameActions';
+import { useAudio } from '../../hooks/useAudio';
+import { isMusicPlaying } from '../../audio/music';
+import MuteButton from '../../components/ui/MuteButton/MuteButton';
 import './Home.css';
 
 /* ── Enlace de donación ── */
@@ -15,18 +18,37 @@ const BG_SUITS = [
 
 /* ── Notas de la versión ── */
 const PATCH_NOTES = [
-  'Beta 1.0 disponible — puede haber bichos sueltos 🐛',
-  '¡Ya puedes jugar con tus amigos usando salas en tiempo real!',
-  'Como jugar: El objetivo del juego es no ser el último en quedarse sin cartas. En cada turno, los jugadores deben jugar una carta que supere a la anterior (o usar los comodines). Si no pueden, deben tomar todas las cartas del centro. El ultimo jugador en seguir con cartas es coronado como el "IDIOTA".',
+  'Beta 2.0 disponible — puede haber bichos sueltos 🐛',
+  'Se ha añadido musica y se ha mejorado la experiencia de juego.'
 ];
 
 export default function Home() {
   const { connected } = useSocket();
   const { createRoom, joinRoom } = useGameActions();
+  const { unlock, startMusic } = useAudio();
   const [username, setUsername]   = useState('');
   const [roomCode, setRoomCode]   = useState('');
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(null); // 'create' | 'join' | null
+  const musicStarted = useRef(false);
+
+  // Primer gesto del usuario (autoplay): desbloquear AudioContext y arrancar musica
+  useEffect(() => {
+    const begin = async () => {
+      if (musicStarted.current) return;
+      await unlock();
+      await startMusic();
+      if (isMusicPlaying()) musicStarted.current = true;
+    };
+    const onGesture = () => { begin(); };
+
+    window.addEventListener('pointerdown', onGesture);
+    window.addEventListener('keydown', onGesture);
+    return () => {
+      window.removeEventListener('pointerdown', onGesture);
+      window.removeEventListener('keydown', onGesture);
+    };
+  }, [unlock, startMusic]);
 
   function validate(requireRoom = false) {
     if (!username.trim()) {
@@ -41,20 +63,28 @@ export default function Home() {
     return true;
   }
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!validate()) return;
+    await unlock();
+    await startMusic();
+    musicStarted.current = true;
     setLoading('create');
     createRoom(username.trim());
   }
 
-  function handleJoin() {
+  async function handleJoin() {
     if (!validate(true)) return;
+    await unlock();
+    await startMusic();
+    musicStarted.current = true;
     setLoading('join');
     joinRoom(username.trim(), roomCode.trim().toUpperCase());
   }
 
   return (
     <div className="home">
+      <MuteButton floating />
+
       {/* Patrón de fondo decorativo */}
       <div className="home__bg-pattern" aria-hidden="true">
         {BG_SUITS.map(({ s, i }) => (
@@ -91,12 +121,29 @@ export default function Home() {
           </a>
         </div>
 
+        <div className="home__side-block home__side-block--support">
+          <div className="home__side-block-deco" aria-hidden="true">📚</div>
+          <p className="home__side-label">Informacion</p>
+          <p className="home__side-desc">
+            Conoce del juego y sus reglas.
+          </p>
+          <a
+            className="home__support-btn"
+            href={'https://docs.google.com/document/d/17jkYqr8xAS2iin8TPk_kVCC4iPQ9Tj5n-eNZtMY-XUs/edit?tab=t.0#heading=h.sg9oh4jk6rum'}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span className="home__support-icon">📚</span>
+            <span>Conocer más</span>
+          </a>
+        </div>
+
         {/* Bloque de Novedades */}
         <div className="home__side-block home__side-block--notes">
           <div className="home__side-divider" aria-hidden="true">
             <span>♠</span><span>♥</span><span>♦</span><span>♣</span>
           </div>
-          <p className="home__side-label">Novedades · Beta 1.0</p>
+          <p className="home__side-label">Novedades · Beta 2.0</p>
           <ul className="home__patch-notes">
             {PATCH_NOTES.map((note, i) => (
               <li key={i} className="home__patch-note">

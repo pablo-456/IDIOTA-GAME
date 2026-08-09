@@ -1,0 +1,202 @@
+/* ════════════════════════════════════════════════════════
+   OVERLAY — Ruleta: quien inicia la partida
+════════════════════════════════════════════════════════ */
+
+.roulette-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 470;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.roulette-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  animation: roulette-fade-in 0.35s ease;
+}
+
+.roulette-overlay__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 1rem;
+  animation: roulette-stage-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes roulette-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes roulette-stage-in {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.roulette-overlay__title {
+  margin: 0;
+  font-family: var(--font-display, serif);
+  font-size: clamp(1rem, 3.5vw, 1.35rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold, #c9a84c);
+  text-shadow: 0 0 18px rgba(201, 168, 76, 0.35);
+}
+
+.roulette-overlay__wheel-wrap {
+  position: relative;
+  width: min(78vw, 320px);
+  height: min(78vw, 320px);
+}
+
+.roulette-overlay__pointer {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 22px solid var(--gold-light, #e8d48b);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+}
+
+.roulette-overlay__pointer::after {
+  content: '';
+  position: absolute;
+  top: -22px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  background: var(--gold, #c9a84c);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(201, 168, 76, 0.7);
+}
+
+.roulette-overlay__wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px solid var(--gold, #c9a84c);
+  box-shadow:
+    0 0 0 6px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(201, 168, 76, 0.25),
+    inset 0 0 30px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.roulette-overlay__wheel--spinning {
+  transition: transform 3.5s cubic-bezier(0.12, 0.75, 0.12, 1);
+}
+
+.roulette-overlay__hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18%;
+  height: 18%;
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #2a1f0a, #0a100b);
+  border: 2px solid var(--gold, #c9a84c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold-light, #e8d48b);
+  font-size: 1.1rem;
+  z-index: 2;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.roulette-overlay__seg-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display, serif);
+  font-size: clamp(0.58rem, 2.2vw, 0.78rem);
+  font-weight: 700;
+  color: #f5ead8;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+  transform-origin: center center;
+}
+
+.roulette-overlay__seg-label--winner {
+  color: #fff8e7;
+}
+
+.roulette-overlay__result {
+  min-height: 3.2rem;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.roulette-overlay__result--show {
+  opacity: 1;
+}
+
+.roulette-overlay__result-main {
+  margin: 0;
+  font-family: var(--font-display, serif);
+  font-size: clamp(1.15rem, 4vw, 1.6rem);
+  font-weight: 700;
+  color: var(--gold-light, #e8d48b);
+  letter-spacing: 0.04em;
+}
+
+.roulette-overlay__result-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--cream-dim, #b8a98a);
+  font-style: italic;
+}
+
+.roulette-overlay__timer {
+  width: min(200px, 50vw);
+  height: 3px;
+  background: rgba(201, 168, 76, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.roulette-overlay__timer-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--gold-dim, #a88b3a), var(--gold-light, #e8d48b));
+  transform-origin: left center;
+  animation: roulette-timer 1.8s linear forwards;
+}
+
+@keyframes roulette-timer {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+@media (max-width: 420px) {
+  .roulette-overlay__wheel-wrap {
+    width: min(84vw, 280px);
+    height: min(84vw, 280px);
+  }
+  .roulette-overlay__seg-label {
+    font-size: 0.55rem;
+  }
+}

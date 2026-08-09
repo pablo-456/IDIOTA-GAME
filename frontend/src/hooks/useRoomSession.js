@@ -14,6 +14,7 @@ export function useRoomSession() {
   const [myId, setMyId] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [serverError, setServerError] = useState(null);
+  const [firstPlayer, setFirstPlayer] = useState(null);
 
   useEffect(() => {
     const handleConnect = () => setMyId(socket.id);
@@ -46,9 +47,13 @@ export function useRoomSession() {
       setScreen('GAME');
     });
 
-    const offStarted = on(SERVER_EVENTS.GAME_STARTED, ({ state }) => {
+    const offStarted = on(SERVER_EVENTS.GAME_STARTED, ({ state, firstPlayerId, firstPlayerName }) => {
       setGameState(state);
       setScreen('GAME');
+      // Solo al inicio real de PLAYING (no sync mid-game)
+      if (firstPlayerId) {
+        setFirstPlayer({ id: firstPlayerId, name: firstPlayerName ?? 'Alguien' });
+      }
     });
 
     const offDisconnect = on(SERVER_EVENTS.PLAYER_DISCONNECTED, ({ state }) => {
@@ -82,6 +87,8 @@ export function useRoomSession() {
     myId,
     gameState,
     serverError,
+    firstPlayer,
+    clearFirstPlayer: () => setFirstPlayer(null),
     clearServerError: () => setServerError(null),
   };
 }

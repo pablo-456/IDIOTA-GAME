@@ -15,7 +15,7 @@ export default function PlayingPhase({ gameState, myId, onPlayCards, onPickUp })
   const myHand = gameState.myHand;
   const isMyTurn = gameState.currentPlayerId === myId;
   const pile = gameState.pile ?? [];
-  const opponents = (gameState.players ?? []).filter((p) => p.id !== myId);
+  const opponents = (gameState.players ?? []).filter((p) => p.id !== myId && !p.isSaved);
 
   const activeZone = (() => {
     if (!myHand) return null;

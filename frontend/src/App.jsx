@@ -17,6 +17,8 @@ export default function App() {
     gameState,
     serverError,
     clearServerError,
+    firstPlayer,
+    clearFirstPlayer,
   } = useRoomSession();
 
   return (
@@ -42,6 +44,8 @@ export default function App() {
             gameState={gameState}
             myId={myId}
             roomId={roomId}
+            firstPlayer={firstPlayer}
+            onFirstPlayerDone={clearFirstPlayer}
           />
         )}
       </div>
