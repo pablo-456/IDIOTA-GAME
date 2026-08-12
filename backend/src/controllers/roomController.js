@@ -4,73 +4,84 @@
  * Gestiona el ciclo de vida de todas las partidas activas en memoria RAM.
  * No hay base de datos: el objeto `games` es la única fuente de verdad.
  *
- * ─── RESPONSABILIDADES ───────────────────────────────────────────────────────
- *   • Crear salas con código único aleatorio
- *   • Permitir que jugadores se unan validando límites (3–7)
- *   • Manejar desconexiones limpias (eliminar jugador, ajustar turno)
- *   • Limpiar partidas finalizadas o vacías para liberar memoria
- *
- * ─── ESTRUCTURA DE `games` ───────────────────────────────────────────────────
- *
- *   games = {
- *     'ABC123': Game,   // instancia de Game por roomId
- *     'XYZ789': Game,
- *     ...
- *   }
- *
- * ─── ÍNDICE INVERSO `playerRoomMap` ──────────────────────────────────────────
- *
- *   playerRoomMap = {
- *     'socket.id_A': 'ABC123',  // permite ubicar la sala de un jugador en O(1)
- *     'socket.id_B': 'XYZ789',
- *   }
- *
- *   Esto es crítico para el evento 'disconnect' de Socket.io, ya que en ese
- *   punto solo conocemos el socket.id del jugador que se fue.
+ * Incluye tokens de sesión y periodo de gracia al desconectar (rejoin).
  */
 
 const Game = require('../models/Game');
+
+/** Gracia antes de expulsar a un jugador desconectado (ms). */
+const DISCONNECT_GRACE_MS = 45_000;
 
 // ---------------------------------------------------------------------------
 // Estado global en memoria
 // ---------------------------------------------------------------------------
 
-/** @type {{ [roomId: string]: Game }} Todas las partidas activas */
+/** @type {{ [roomId: string]: Game }} */
 const games = {};
 
-/**
- * Índice inverso: socket.id → roomId.
- * Permite encontrar la sala de un jugador desconectado en O(1).
- * @type {{ [socketId: string]: string }}
- */
+/** @type {{ [socketId: string]: string }} socket.id → roomId */
 const playerRoomMap = {};
+
+/**
+ * token → { roomId, playerId, username }
+ * @type {{ [token: string]: { roomId: string, playerId: string, username: string } }}
+ */
+const sessionByToken = {};
+
+/**
+ * playerId → { timer, roomId, oldSocketId, username }
+ * @type {{ [playerId: string]: { timer: NodeJS.Timeout, roomId: string, oldSocketId: string, username: string } }}
+ */
+const pendingDisconnects = {};
+
+/** Callback opcional cuando expira la gracia (lo registra server.js). */
+let onGraceExpired = null;
 
 // ---------------------------------------------------------------------------
 // Helpers privados
 // ---------------------------------------------------------------------------
 
-/**
- * Genera un código de sala único de 6 caracteres que no colisione con los
- * existentes.
- * @returns {string}
- */
 function _uniqueRoomCode() {
   let code;
   do {
     code = Math.random().toString(36).slice(2, 8).toUpperCase();
-  } while (games[code]); // garantizar unicidad
+  } while (games[code]);
   return code;
 }
 
-/**
- * Elimina una partida del estado global y limpia el mapa de jugadores.
- * @param {string} roomId
- */
+function _registerSession(player) {
+  if (!player?.sessionToken) return;
+  sessionByToken[player.sessionToken] = {
+    roomId:   player._roomId || null,
+    playerId: player.id,
+    username: player.username,
+  };
+}
+
+function _setSession(token, roomId, playerId, username) {
+  sessionByToken[token] = { roomId, playerId, username };
+}
+
+function _clearSessionsForGame(game) {
+  for (const player of game.players) {
+    if (player.sessionToken) delete sessionByToken[player.sessionToken];
+    _clearPending(player.id);
+  }
+}
+
+function _clearPending(playerId) {
+  const pending = pendingDisconnects[playerId];
+  if (!pending) return;
+  clearTimeout(pending.timer);
+  delete pendingDisconnects[playerId];
+}
+
 function _destroyGame(roomId) {
   const game = games[roomId];
   if (!game) return;
 
-  // Limpiar el índice inverso para todos los jugadores de esta sala
+  _clearSessionsForGame(game);
+
   for (const player of game.players) {
     delete playerRoomMap[player.id];
   }
@@ -78,40 +89,33 @@ function _destroyGame(roomId) {
 }
 
 // ---------------------------------------------------------------------------
-// API pública del controlador
+// API pública
 // ---------------------------------------------------------------------------
 
 /**
- * Crea una nueva sala de juego y registra al jugador anfitrión.
- *
- * @param {string} hostId   - socket.id del creador
- * @param {string} hostName - Nombre visible del creador
- * @returns {{ success: boolean, roomId: string, game: Game }}
+ * Registra el callback invocado cuando expira la gracia de desconexión.
+ * @param {(payload: object) => void} fn
  */
-function createRoom(hostId, hostName) {
-  const roomId = _uniqueRoomCode();
-  const game   = new Game(roomId, hostId, hostName);
-
-  games[roomId]          = game;
-  playerRoomMap[hostId]  = roomId;
-
-  console.log(`[RoomController] Sala creada: ${roomId} por ${hostName} (${hostId})`);
-  return { success: true, roomId, game };
+function setGraceExpiredHandler(fn) {
+  onGraceExpired = fn;
 }
 
-/**
- * Une a un jugador a una sala existente.
- *
- * Valida:
- *   • Que la sala exista
- *   • Que la partida esté en estado LOBBY (no empezada)
- *   • Que no supere el máximo de 7 jugadores
- *
- * @param {string} roomId     - Código de la sala
- * @param {string} playerId   - socket.id del nuevo jugador
- * @param {string} playerName - Nombre visible del nuevo jugador
- * @returns {{ success: boolean, error?: string, game?: Game }}
- */
+function createRoom(hostId, hostName, { isPublic = false } = {}) {
+  const roomId = _uniqueRoomCode();
+  const game   = new Game(roomId, hostId, hostName, { isPublic });
+
+  games[roomId]         = game;
+  playerRoomMap[hostId] = roomId;
+
+  const host = game.players[0];
+  if (host?.sessionToken) {
+    _setSession(host.sessionToken, roomId, hostId, hostName);
+  }
+
+  console.log(`[RoomController] Sala creada: ${roomId} por ${hostName} (${hostId}) isPublic=${game.isPublic}`);
+  return { success: true, roomId, game, sessionToken: host?.sessionToken ?? null };
+}
+
 function joinRoom(roomId, playerId, playerName) {
   const game = games[roomId];
 
@@ -129,33 +133,189 @@ function joinRoom(roomId, playerId, playerName) {
 
   playerRoomMap[playerId] = roomId;
 
-  console.log(`[RoomController] ${playerName} (${playerId}) se unió a la sala ${roomId}`);
-  return { success: true, game };
+  const player = game.players.find((p) => p.id === playerId);
+  if (player?.sessionToken) {
+    _setSession(player.sessionToken, roomId, playerId, playerName);
+  }
+
+  console.log(`[RoomController] ${playerName} (${playerId}) se unió a sala ${roomId}`);
+  return { success: true, game, sessionToken: player?.sessionToken ?? result.sessionToken };
 }
 
 /**
- * Maneja la desconexión limpia de un jugador.
- *
- * Comportamiento según el estado de la partida:
- *   • LOBBY    : El jugador simplemente sale. Si era el único, se destruye la sala.
- *   • SETUP    : Ídem; se notifica al resto.
- *   • PLAYING  : Sus cartas se eliminan; si era su turno, se avanza automáticamente.
- *                Si quedan < 2 jugadores, la partida termina.
- *   • FINISHED : Solo limpieza del mapa.
- *
- * @param {string} socketId - socket.id del jugador desconectado
- * @returns {{
- *   success:      boolean,
- *   roomId:       string|null,
- *   game:         Game|null,
- *   advanceTurn:  boolean,
- *   gameDestroyed: boolean,
- * }}
+ * Inicia el periodo de gracia (no expulsa todavía).
+ * @param {string} socketId
  */
+function beginPendingDisconnect(socketId) {
+  const roomId = playerRoomMap[socketId];
+  if (!roomId) {
+    return { success: false, roomId: null, game: null };
+  }
+
+  const game = games[roomId];
+  if (!game) {
+    delete playerRoomMap[socketId];
+    return { success: false, roomId, game: null };
+  }
+
+  const player = game.players.find((p) => p.id === socketId);
+  if (!player) {
+    delete playerRoomMap[socketId];
+    return { success: false, roomId, game: null };
+  }
+
+  // Ya estaba en gracia (doble disconnect)
+  if (pendingDisconnects[socketId]) {
+    return {
+      success: true,
+      roomId,
+      game,
+      alreadyPending: true,
+      username: player.username,
+      playerId: socketId,
+    };
+  }
+
+  const { advanceTurn } = game.markDisconnected(socketId);
+
+  const timer = setTimeout(() => {
+    const result = finalizeDisconnect(socketId);
+    if (typeof onGraceExpired === 'function') {
+      onGraceExpired(result);
+    }
+  }, DISCONNECT_GRACE_MS);
+
+  pendingDisconnects[socketId] = {
+    timer,
+    roomId,
+    oldSocketId: socketId,
+    username: player.username,
+  };
+
+  console.log(`[RoomController] Gracia 45s para ${player.username} (${socketId}) en ${roomId}`);
+
+  return {
+    success: true,
+    roomId,
+    game,
+    alreadyPending: false,
+    advanceTurn,
+    username: player.username,
+    playerId: socketId,
+  };
+}
+
+/**
+ * Expulsa definitivamente tras la gracia.
+ * @param {string} playerId - socket.id (aún el antiguo si no hubo rejoin)
+ */
+function finalizeDisconnect(playerId) {
+  const pending = pendingDisconnects[playerId];
+  const roomId = pending?.roomId ?? playerRoomMap[playerId];
+
+  _clearPending(playerId);
+
+  if (!roomId) {
+    return { success: false, roomId: null, game: null, advanceTurn: false, gameDestroyed: false };
+  }
+
+  const game = games[roomId];
+  if (!game) {
+    delete playerRoomMap[playerId];
+    return { success: false, roomId, game: null, advanceTurn: false, gameDestroyed: false };
+  }
+
+  const player = game.players.find((p) => p.id === playerId);
+  if (player?.sessionToken) {
+    delete sessionByToken[player.sessionToken];
+  }
+
+  console.log(`[RoomController] Expulsión definitiva: ${playerId} de ${roomId}`);
+
+  const { advanceTurn } = game.removePlayer(playerId);
+  delete playerRoomMap[playerId];
+
+  if (game.players.length === 0 || game.status === 'FINISHED') {
+    _destroyGame(roomId);
+    return {
+      success: true,
+      roomId,
+      game: null,
+      advanceTurn: false,
+      gameDestroyed: true,
+      playerId,
+    };
+  }
+
+  return {
+    success: true,
+    roomId,
+    game,
+    advanceTurn,
+    gameDestroyed: false,
+    playerId,
+  };
+}
+
+/**
+ * Reengancha con token de sesión a un nuevo socket.
+ * @param {string} sessionToken
+ * @param {string} newSocketId
+ */
+function rejoinSession(sessionToken, newSocketId) {
+  if (!sessionToken) {
+    return { success: false, error: 'Token de sesión requerido.' };
+  }
+
+  const session = sessionByToken[sessionToken];
+  if (!session) {
+    return { success: false, error: 'Sesión inválida o expirada.' };
+  }
+
+  const { roomId, playerId: oldPlayerId, username } = session;
+  const game = games[roomId];
+  if (!game) {
+    delete sessionByToken[sessionToken];
+    return { success: false, error: 'La sala ya no existe.' };
+  }
+
+  const player = game.players.find(
+    (p) => p.sessionToken === sessionToken || p.id === oldPlayerId
+  );
+  if (!player) {
+    delete sessionByToken[sessionToken];
+    return { success: false, error: 'Ya no estás en la partida.' };
+  }
+
+  // Cancelar gracia si estaba pendiente (clave = id actual del jugador)
+  _clearPending(player.id);
+
+  const oldId = player.id;
+  const result = game.reattachPlayer(oldId, newSocketId);
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  delete playerRoomMap[oldId];
+  playerRoomMap[newSocketId] = roomId;
+  _setSession(sessionToken, roomId, newSocketId, username);
+
+  console.log(`[RoomController] Rejoin: ${username} ${oldId} → ${newSocketId} en ${roomId}`);
+
+  return {
+    success: true,
+    roomId,
+    game,
+    sessionToken,
+    username,
+  };
+}
+
+/** Expulsión inmediata (compat / casos especiales). */
 function disconnectPlayer(socketId) {
+  _clearPending(socketId);
   const roomId = playerRoomMap[socketId];
 
-  // El jugador no estaba en ninguna sala registrada
   if (!roomId) {
     return { success: false, roomId: null, game: null, advanceTurn: false, gameDestroyed: false };
   }
@@ -166,14 +326,12 @@ function disconnectPlayer(socketId) {
     return { success: false, roomId, game: null, advanceTurn: false, gameDestroyed: false };
   }
 
-  console.log(`[RoomController] Jugador ${socketId} desconectado de sala ${roomId}`);
+  const player = game.players.find((p) => p.id === socketId);
+  if (player?.sessionToken) delete sessionByToken[player.sessionToken];
 
-  // Eliminar al jugador de la partida
   const { advanceTurn } = game.removePlayer(socketId);
   delete playerRoomMap[socketId];
 
-  // Si la sala quedó vacía o la partida terminó sin jugadores suficientes,
-  // destruimos la sala para liberar memoria
   if (game.players.length === 0 || game.status === 'FINISHED') {
     _destroyGame(roomId);
     return { success: true, roomId, game: null, advanceTurn: false, gameDestroyed: true };
@@ -182,51 +340,53 @@ function disconnectPlayer(socketId) {
   return { success: true, roomId, game, advanceTurn, gameDestroyed: false };
 }
 
-/**
- * Recupera una instancia de Game por su código de sala.
- *
- * @param {string} roomId
- * @returns {Game|null}
- */
 function getGame(roomId) {
   return games[roomId] ?? null;
 }
 
-/**
- * Recupera el código de sala asociado a un socket.id.
- *
- * @param {string} socketId
- * @returns {string|null}
- */
 function getRoomIdBySocket(socketId) {
   return playerRoomMap[socketId] ?? null;
 }
 
-/**
- * Devuelve un resumen de todas las salas activas (útil para debugging/admin).
- * @returns {object[]}
- */
 function listRooms() {
   return Object.values(games).map((g) => ({
     id:          g.id,
     status:      g.status,
+    isPublic:    g.isPublic,
     playerCount: g.players.length,
     players:     g.players.map((p) => p.username),
   }));
 }
 
-// ---------------------------------------------------------------------------
-// Exports
-// ---------------------------------------------------------------------------
+function listPublicLobbies() {
+  return Object.values(games)
+    .filter((g) => g.isPublic && g.status === 'LOBBY')
+    .map((g) => ({
+      id:          g.id,
+      playerCount: g.players.length,
+      maxPlayers:  7,
+      players:     g.players.map((p) => p.username),
+    }));
+}
+
+function clearSessionsForRoom(roomId) {
+  const game = games[roomId];
+  if (game) _clearSessionsForGame(game);
+}
 
 module.exports = {
   createRoom,
   joinRoom,
+  beginPendingDisconnect,
+  finalizeDisconnect,
+  rejoinSession,
   disconnectPlayer,
+  setGraceExpiredHandler,
   getGame,
   getRoomIdBySocket,
   listRooms,
-  // Exportamos el objeto `games` para que el servidor pueda inspeccionar estado
-  // directamente si es necesario (solo lectura recomendada desde fuera)
+  listPublicLobbies,
+  clearSessionsForRoom,
+  DISCONNECT_GRACE_MS,
   games,
 };

@@ -58,6 +58,7 @@
  */
 
 const Deck = require('./Deck');
+const crypto = require('crypto');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -71,6 +72,11 @@ function generateRoomCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+/** @returns {string} */
+function newSessionToken() {
+  return crypto.randomUUID();
+}
+
 // ---------------------------------------------------------------------------
 // Clase Game
 // ---------------------------------------------------------------------------
@@ -80,10 +86,17 @@ class Game {
    * @param {string} roomId   - Código único de la sala
    * @param {string} hostId   - socket.id del jugador que creó la sala
    * @param {string} hostName - Nombre del anfitrión
+   * @param {{ isPublic?: boolean }} [options]
    */
-  constructor(roomId, hostId, hostName) {
+  constructor(roomId, hostId, hostName, { isPublic = false } = {}) {
     /** @type {string} Código único de la sala */
     this.id = roomId;
+
+    /**
+     * @type {boolean}
+     * true = visible en el listado de salas públicas (solo mientras esté en LOBBY).
+     */
+    this.isPublic = Boolean(isPublic);
 
     /**
      * @type {PlayerState[]}
@@ -168,9 +181,12 @@ class Game {
    * @private
    */
   _addPlayerObject(id, username) {
+    const sessionToken = newSessionToken();
     this.players.push({
       id,
       username,
+      sessionToken,
+      isConnected:           true,
       manoPrivada:           [],
       cartasVisibles:        [],
       cartasVisiblesPublicas: [], // las 4 elegidas en SETUP — lo único que ven los rivales
@@ -178,6 +194,7 @@ class Game {
       isReady:               false,
       isSaved:               false,
     });
+    return sessionToken;
   }
 
   /**
@@ -185,7 +202,7 @@ class Game {
    *
    * @param {string} playerId   - socket.id del nuevo jugador
    * @param {string} playerName - Nombre del nuevo jugador
-   * @returns {{ success: boolean, error?: string }}
+   * @returns {{ success: boolean, error?: string, sessionToken?: string }}
    */
   addPlayer(playerId, playerName) {
     if (this.status !== 'LOBBY') {
@@ -198,8 +215,64 @@ class Game {
       return { success: false, error: 'El jugador ya está en la sala.' };
     }
 
-    this._addPlayerObject(playerId, playerName);
-    return { success: true };
+    const sessionToken = this._addPlayerObject(playerId, playerName);
+    return { success: true, sessionToken };
+  }
+
+  /**
+   * Marca al jugador como desconectado (periodo de gracia). No lo elimina.
+   * Si era su turno en PLAYING, avanza el turno para no bloquear la partida.
+   *
+   * @param {string} playerId
+   * @returns {{ success: boolean, advanceTurn: boolean }}
+   */
+  markDisconnected(playerId) {
+    const player = this.players.find((p) => p.id === playerId);
+    if (!player) return { success: false, advanceTurn: false };
+
+    player.isConnected = false;
+
+    let advanceTurn = false;
+    if (this.status === 'PLAYING' && this.currentPlayer?.id === playerId) {
+      this.nextTurn();
+      advanceTurn = true;
+    }
+
+    return { success: true, advanceTurn };
+  }
+
+  /**
+   * Reatacha un jugador desconectado a un nuevo socket.id.
+   *
+   * @param {string} oldPlayerId
+   * @param {string} newSocketId
+   * @returns {{ success: boolean, error?: string, player?: object }}
+   */
+  reattachPlayer(oldPlayerId, newSocketId) {
+    const player = this.players.find((p) => p.id === oldPlayerId);
+    if (!player) {
+      return { success: false, error: 'Jugador no encontrado en la sala.' };
+    }
+
+    // Si otro jugador ya usa ese socket id (raro), abortar
+    if (this.players.some((p) => p.id === newSocketId && p !== player)) {
+      return { success: false, error: 'Conflicto de identidad de socket.' };
+    }
+
+    const oldId = player.id;
+    player.id = newSocketId;
+    player.isConnected = true;
+
+    // Actualizar referencias internas que usen el id antiguo
+    if (this.loserId === oldId) this.loserId = newSocketId;
+    if (this.pendingForcedPickUp?.playerId === oldId) {
+      this.pendingForcedPickUp.playerId = newSocketId;
+    }
+    for (const saved of this.savedPlayers) {
+      if (saved.id === oldId) saved.id = newSocketId;
+    }
+
+    return { success: true, player };
   }
 
   /**
@@ -384,6 +457,9 @@ class Game {
     const player = this.currentPlayer;
     if (!player || player.id !== playerId) {
       return { success: false, error: 'No es tu turno.' };
+    }
+    if (player.isConnected === false) {
+      return { success: false, error: 'Estás desconectado; espera a reconectar.' };
     }
     if (!Array.isArray(cardIds) || cardIds.length === 0) {
       return { success: false, error: 'Debes jugar al menos una carta.' };
@@ -577,7 +653,7 @@ class Game {
   // ─── Utilidades de turno ─────────────────────────────────────────────────
 
   /**
-   * Avanza el turno al siguiente jugador activo (isSaved=false).
+   * Avanza el turno al siguiente jugador activo (isSaved=false, conectado).
    */
   nextTurn() {
     if (this.players.length === 0) return;
@@ -586,7 +662,11 @@ class Game {
     do {
       this.currentTurnIndex = (this.currentTurnIndex + 1) % total;
       attempts++;
-    } while (attempts < total && this.players[this.currentTurnIndex]?.isSaved);
+    } while (
+      attempts < total &&
+      (this.players[this.currentTurnIndex]?.isSaved ||
+        this.players[this.currentTurnIndex]?.isConnected === false)
+    );
   }
 
   /**
@@ -638,6 +718,7 @@ class Game {
     return {
       id:               this.id,
       status:           this.status,
+      isPublic:         this.isPublic,
       currentPlayerId:  this.currentPlayer?.id ?? null,
       pile:             this.pile,
       deckRemaining:    this.deck.remaining,
@@ -649,6 +730,7 @@ class Game {
         username:             p.username,
         isReady:              p.isReady,
         isSaved:              p.isSaved,
+        isConnected:          p.isConnected !== false,
         cartasVisibles:       p.cartasVisiblesPublicas, // rivales solo ven las 4 originales
         // Incluye cartas recogidas en fase visibles (están en cartasVisibles pero no en públicas)
         manoPrivadaCount:     p.manoPrivada.length

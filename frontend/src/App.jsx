@@ -1,10 +1,12 @@
 /**
- * App.jsx — Shell de navegación HOME → LOBBY → GAME.
+ * App.jsx — Shell de navegación HOME → PUBLIC_LOBBIES → LOBBY → GAME.
  * El estado de sesión vive en useRoomSession.
  */
 
 import { useRoomSession } from './hooks/useRoomSession';
+import { useSocket } from './hooks/useSocket';
 import Home from './pages/Home/Home';
+import PublicLobbies from './pages/PublicLobbies/PublicLobbies';
 import Lobby from './pages/Lobby/Lobby';
 import Game from './pages/Game/Game';
 import './App.css';
@@ -19,7 +21,13 @@ export default function App() {
     clearServerError,
     firstPlayer,
     clearFirstPlayer,
+    pendingUsername,
+    goHome,
+    goToPublicLobbies,
   } = useRoomSession();
+
+  const { connected, reconnect } = useSocket();
+  const inMatch = screen === 'LOBBY' || screen === 'GAME';
 
   return (
     <div className="app">
@@ -30,13 +38,30 @@ export default function App() {
         </div>
       )}
 
+      {inMatch && !connected && (
+        <div className="app__reconnect-banner" role="status">
+          <span>Reconectando al servidor…</span>
+          <button type="button" onClick={() => reconnect()}>Reintentar</button>
+        </div>
+      )}
+
       <div className="app__screen" key={screen}>
-        {screen === 'HOME' && <Home />}
+        {screen === 'HOME' && (
+          <Home onGoToPublicLobbies={goToPublicLobbies} />
+        )}
+        {screen === 'PUBLIC_LOBBIES' && (
+          <PublicLobbies
+            username={pendingUsername}
+            onBack={goHome}
+          />
+        )}
         {screen === 'LOBBY' && (
           <Lobby
             roomId={roomId}
             gameState={gameState}
             myId={myId}
+            isPublic={Boolean(gameState?.isPublic)}
+            onLeave={goHome}
           />
         )}
         {screen === 'GAME' && (

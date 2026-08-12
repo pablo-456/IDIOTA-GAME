@@ -42,6 +42,7 @@ const http       = require('http');
 const { Server } = require('socket.io');
 
 const roomController = require('./controllers/roomController');
+const { PUBLIC_ROOMS_ENABLED } = require('./constants/features');
 
 // ---------------------------------------------------------------------------
 // Configuración del servidor
@@ -101,6 +102,56 @@ function emitError(socket, message) {
   socket.emit('error', { message });
 }
 
+/**
+ * Emite el listado actual de lobbies públicos a todos los sockets conectados.
+ * Solo tiene efecto si PUBLIC_ROOMS_ENABLED está activo.
+ */
+function broadcastPublicRooms() {
+  if (!PUBLIC_ROOMS_ENABLED) return;
+  io.emit('public_rooms_updated', {
+    rooms: roomController.listPublicLobbies(),
+  });
+}
+
+/**
+ * Cuando expira la gracia de desconexión: expulsar y notificar a la sala.
+ */
+function handleGraceExpired(result) {
+  if (!result?.success) return;
+
+  const { roomId, game, advanceTurn, gameDestroyed, playerId } = result;
+
+  if (gameDestroyed) {
+    console.log(`[grace] Sala ${roomId} destruida tras expulsión definitiva.`);
+    broadcastPublicRooms();
+    return;
+  }
+
+  if (!game || !roomId) return;
+
+  io.to(roomId).emit('player_disconnected', {
+    socketId:    playerId,
+    advanceTurn,
+    state:       game.toPublicState(),
+    message:     'Un jugador no se reconectó a tiempo.',
+  });
+
+  if (game.isPublic && game.status === 'LOBBY') broadcastPublicRooms();
+
+  if (game.status === 'FINISHED') {
+    const loser = game.players.find((p) => p.id === game.loserId);
+    io.to(roomId).emit('game_over', {
+      loserId:      game.loserId,
+      loserName:    loser?.username ?? 'Desconocido',
+      savedPlayers: game.savedPlayers ?? [],
+      reason:       'Jugadores insuficientes para continuar.',
+    });
+    roomController.clearSessionsForRoom(roomId);
+  }
+}
+
+roomController.setGraceExpiredHandler(handleGraceExpired);
+
 // ---------------------------------------------------------------------------
 // Socket.io — Manejo de eventos
 // ---------------------------------------------------------------------------
@@ -115,12 +166,19 @@ io.on('connection', (socket) => {
   // Crea una nueva sala y une al creador. La sala arranca en estado LOBBY
   // esperando a que otros jugadores se unan antes de iniciar.
   // ─────────────────────────────────────────────────────────────────────────
-  socket.on('create_room', ({ username } = {}) => {
+  socket.on('create_room', ({ username, isPublic } = {}) => {
     if (!username?.trim()) {
       return emitError(socket, 'Se requiere un nombre de usuario.');
     }
 
-    const { roomId, game } = roomController.createRoom(socket.id, username.trim());
+    // isPublic solo se respeta si el feature está habilitado en el servidor
+    const makePublic = PUBLIC_ROOMS_ENABLED && Boolean(isPublic);
+
+    const { roomId, game, sessionToken } = roomController.createRoom(
+      socket.id,
+      username.trim(),
+      { isPublic: makePublic }
+    );
 
     // Unir el socket a la "room" de Socket.io para broadcast futuro
     socket.join(roomId);
@@ -128,13 +186,16 @@ io.on('connection', (socket) => {
     // Confirmar al creador
     socket.emit('room_created', {
       roomId,
+      sessionToken,
       state: game.toPrivateState(socket.id),
     });
 
     // Notificar estado a toda la sala (solo el creador por ahora)
     io.to(roomId).emit('room_updated', game.toPublicState());
 
-    console.log(`[create_room] Sala ${roomId} creada por ${username}`);
+    if (makePublic) broadcastPublicRooms();
+
+    console.log(`[create_room] Sala ${roomId} creada por ${username} (isPublic=${makePublic})`);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -149,8 +210,9 @@ io.on('connection', (socket) => {
       return emitError(socket, 'Se requieren roomId y username.');
     }
 
+    const code = roomId.trim().toUpperCase();
     const result = roomController.joinRoom(
-      roomId.trim().toUpperCase(),
+      code,
       socket.id,
       username.trim()
     );
@@ -159,21 +221,24 @@ io.on('connection', (socket) => {
       return emitError(socket, result.error);
     }
 
-    const { game } = result;
+    const { game, sessionToken } = result;
 
     // Unir el socket a la "room" de Socket.io
-    socket.join(roomId);
+    socket.join(code);
 
     // Confirmar al jugador que se acaba de unir
     socket.emit('room_joined', {
-      roomId,
+      roomId: code,
+      sessionToken,
       state: game.toPrivateState(socket.id),
     });
 
     // Notificar a TODA la sala (incluyendo al nuevo jugador) del estado actual
-    io.to(roomId).emit('room_updated', game.toPublicState());
+    io.to(code).emit('room_updated', game.toPublicState());
 
-    console.log(`[join_room] ${username} se unió a sala ${roomId} (${game.players.length} jugadores)`);
+    if (game.isPublic) broadcastPublicRooms();
+
+    console.log(`[join_room] ${username} se unió a sala ${code} (${game.players.length} jugadores)`);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -209,6 +274,9 @@ io.on('connection', (socket) => {
 
     // Actualizar estado público a toda la sala
     io.to(roomId).emit('room_updated', game.toPublicState());
+
+    // Al salir de LOBBY, la sala deja de aparecer en el listado público
+    if (game.isPublic) broadcastPublicRooms();
 
     console.log(`[start_setup] Fase SETUP iniciada en sala ${roomId}`);
   });
@@ -338,6 +406,7 @@ io.on('connection', (socket) => {
           savedPlayers: game.savedPlayers,
           reason:       'El último jugador con cartas es el idiota.',
         });
+        roomController.clearSessionsForRoom(roomId);
         return;
       }
 
@@ -414,50 +483,99 @@ io.on('connection', (socket) => {
     }
   });
   // ─────────────────────────────────────────────────────────────────────────
-  // EVENTO: disconnect (automático de Socket.io)
-  //
-  // Se dispara cuando un socket pierde la conexión (cierre de pestaña,
-  // error de red, etc.). Manejamos la salida limpia del jugador:
-  //
-  //   1. Localizamos su sala usando el índice inverso playerRoomMap
-  //   2. Eliminamos al jugador de la partida (Game.removePlayer)
-  //   3. Si era su turno, avanzamos el turno al siguiente jugador
-  //   4. Notificamos al resto de la sala
-  //   5. Si la sala queda vacía o la partida termina, se destruye la sala
+  // EVENTOS DE SALAS PÚBLICAS (solo si PUBLIC_ROOMS_ENABLED=true)
+  // ─────────────────────────────────────────────────────────────────────────
+  if (PUBLIC_ROOMS_ENABLED) {
+    socket.on('list_public_rooms', () => {
+      socket.emit('public_rooms_updated', {
+        rooms: roomController.listPublicLobbies(),
+      });
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // EVENTO: rejoin_session
+  // Payload: { sessionToken: string }
+  // Reengancha tras caída de red (mismo token en localStorage).
+  // ─────────────────────────────────────────────────────────────────────────
+  socket.on('rejoin_session', ({ sessionToken } = {}) => {
+    const result = roomController.rejoinSession(sessionToken, socket.id);
+    if (!result.success) {
+      return emitError(socket, result.error);
+    }
+
+    const { roomId, game } = result;
+    socket.join(roomId);
+
+    socket.emit('session_restored', {
+      roomId,
+      sessionToken: result.sessionToken,
+      state: game.toPrivateState(socket.id),
+    });
+
+    io.to(roomId).emit('room_updated', game.toPublicState());
+
+    console.log(`[rejoin_session] ${result.username} restaurado en ${roomId}`);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // EVENTO: leave_room — salida voluntaria (sin gracia)
+  // ─────────────────────────────────────────────────────────────────────────
+  socket.on('leave_room', ({ roomId } = {}) => {
+    const result = roomController.disconnectPlayer(socket.id);
+    if (!result.success) return;
+
+    socket.leave(roomId || result.roomId);
+
+    if (result.gameDestroyed) {
+      broadcastPublicRooms();
+      return;
+    }
+
+    const { roomId: rid, game, advanceTurn } = result;
+    io.to(rid).emit('player_disconnected', {
+      socketId: socket.id,
+      advanceTurn,
+      state: game.toPublicState(),
+      message: 'Un jugador ha salido de la sala.',
+    });
+
+    if (game.isPublic && game.status === 'LOBBY') broadcastPublicRooms();
+
+    if (game.status === 'FINISHED') {
+      const loser = game.players.find((p) => p.id === game.loserId);
+      io.to(rid).emit('game_over', {
+        loserId: game.loserId,
+        loserName: loser?.username ?? 'Desconocido',
+        savedPlayers: game.savedPlayers ?? [],
+        reason: 'Jugadores insuficientes para continuar.',
+      });
+      roomController.clearSessionsForRoom(rid);
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // EVENTO: disconnect — periodo de gracia 45s antes de expulsar
   // ─────────────────────────────────────────────────────────────────────────
   socket.on('disconnect', (reason) => {
     console.log(`[Socket] Desconexión: ${socket.id} — motivo: ${reason}`);
 
-    const result = roomController.disconnectPlayer(socket.id);
+    const result = roomController.beginPendingDisconnect(socket.id);
+    if (!result.success) return;
 
-    if (!result.success) return; // El jugador no estaba en ninguna sala
+    const { roomId, game, alreadyPending, username, playerId } = result;
+    if (alreadyPending || !game) return;
 
-    const { roomId, game, advanceTurn, gameDestroyed } = result;
-
-    // Si la sala fue destruida (quedó vacía o ganó alguien al irse todos), nada más que hacer
-    if (gameDestroyed) {
-      console.log(`[disconnect] Sala ${roomId} destruida por falta de jugadores.`);
-      return;
-    }
-
-    // Notificar a los jugadores restantes
-    io.to(roomId).emit('player_disconnected', {
-      socketId:    socket.id,
-      advanceTurn,
-      state:       game.toPublicState(),
-      message:     'Un jugador se ha desconectado.',
+    io.to(roomId).emit('player_pending_disconnect', {
+      playerId,
+      username,
+      graceMs: roomController.DISCONNECT_GRACE_MS,
+      state: game.toPublicState(),
+      message: `${username} se desconectó. Tiene 45s para volver.`,
     });
 
-    // Si la partida terminó por la desconexión (ej. quedaron < 2 jugadores)
-    if (game.status === 'FINISHED') {
-      const loser = game.players.find((p) => p.id === game.loserId);
-      io.to(roomId).emit('game_over', {
-        loserId:      game.loserId,
-        loserName:    loser?.username ?? 'Desconocido',
-        savedPlayers: game.savedPlayers ?? [],
-        reason:       'Jugadores insuficientes para continuar.',
-      });
-    }
+    // También room_updated para refrescar badges isConnected
+    io.to(roomId).emit('room_updated', game.toPublicState());
   });
 });
 
@@ -470,6 +588,7 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`\n╔══════════════════════════════════════╗`);
   console.log(`║  🃏 Servidor IDIOTA en puerto ${PORT}   ║`);
+  console.log(`║  Salas públicas: ${PUBLIC_ROOMS_ENABLED ? 'ON ' : 'OFF'}                ║`);
   console.log(`╚══════════════════════════════════════╝\n`);
 });
 

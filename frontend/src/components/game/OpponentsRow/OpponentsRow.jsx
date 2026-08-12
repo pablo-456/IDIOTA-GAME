@@ -21,6 +21,9 @@ export default function OpponentsRow({ opponents, currentPlayerId }) {
               <div className="opponent__info">
                 <span className="opponent__name">{opp.username}</span>
                 {isActive && <span className="opponent__turn-badge">► Turno</span>}
+                {opp.isConnected === false && (
+                  <span className="opponent__reconnect">Reconectando…</span>
+                )}
               </div>
               <span className="opponent__card-count">{totalCards} 🃏</span>
             </div>

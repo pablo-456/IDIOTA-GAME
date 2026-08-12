@@ -1,0 +1,269 @@
+/* ═══════════════════════════════════════════════════════
+   PublicLobbies.css — Listado de salas públicas
+   ═══════════════════════════════════════════════════════ */
+
+.public-lobbies {
+  --felt:       #0d1f0f;
+  --felt-mid:   #122818;
+  --ink:        #080f09;
+  --cream:      #f5ead8;
+  --cream-dim:  #b8a98a;
+  --font-body:  var(--font-body-lobby);
+  min-height: 100vh;
+  background-color: var(--ink);
+  background-image: radial-gradient(ellipse 80% 70% at 50% 40%, var(--felt) 0%, var(--ink) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  position: relative;
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+.public-lobbies__bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 20px,
+      rgba(201, 168, 76, 0.02) 20px,
+      rgba(201, 168, 76, 0.02) 21px
+    );
+  pointer-events: none;
+}
+
+.public-lobbies__card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 520px;
+  background: linear-gradient(160deg, var(--felt-mid), var(--felt));
+  border: 1px solid var(--gold-dim);
+  border-radius: 16px;
+  padding: 1.75rem 1.5rem 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(201, 168, 76, 0.12);
+  animation: public-lobbies-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes public-lobbies-fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.public-lobbies__header {
+  text-align: center;
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+
+.public-lobbies__back {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: transparent;
+  border: none;
+  color: var(--cream-dim);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.public-lobbies__back:hover {
+  color: var(--gold);
+}
+
+.public-lobbies__title {
+  font-family: var(--font-display);
+  color: var(--gold);
+  font-size: 1.75rem;
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.04em;
+}
+
+.public-lobbies__subtitle {
+  margin: 0;
+  color: var(--cream-dim);
+  font-size: 0.9rem;
+}
+
+.public-lobbies__subtitle strong {
+  color: var(--cream);
+}
+
+.public-lobbies__toolbar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.public-lobbies__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  padding: 0.75rem 1rem;
+}
+
+.public-lobbies__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.public-lobbies__btn--primary {
+  flex: 1;
+  background: linear-gradient(180deg, var(--gold), var(--gold-dim));
+  color: var(--ink);
+  border: none;
+  font-weight: 600;
+}
+
+.public-lobbies__btn--primary:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.public-lobbies__btn--ghost {
+  min-width: 48px;
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+}
+
+.public-lobbies__btn--ghost:not(:disabled):hover {
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.public-lobbies__btn--join {
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 0.5rem 0.9rem;
+  flex-shrink: 0;
+}
+
+.public-lobbies__btn--join:not(:disabled):hover {
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.public-lobbies__list-wrap {
+  border-top: 1px solid rgba(201, 168, 76, 0.15);
+  padding-top: 1rem;
+}
+
+.public-lobbies__list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+}
+
+.public-lobbies__list-header h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cream-dim);
+  font-weight: 500;
+}
+
+.public-lobbies__list-header span {
+  color: var(--gold);
+  font-size: 0.9rem;
+}
+
+.public-lobbies__empty {
+  margin: 0;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  color: var(--cream-dim);
+  font-size: 0.95rem;
+}
+
+.public-lobbies__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.public-lobbies__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(201, 168, 76, 0.12);
+  border-radius: 10px;
+}
+
+.public-lobbies__item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.public-lobbies__item-code {
+  font-family: var(--font-display);
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  font-size: 1.05rem;
+}
+
+.public-lobbies__item-count {
+  color: var(--cream);
+  font-size: 0.85rem;
+}
+
+.public-lobbies__item-names {
+  color: var(--cream-dim);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.public-lobbies__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(8, 15, 9, 0.25);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: public-lobbies-spin 0.7s linear infinite;
+}
+
+.public-lobbies__btn--join .public-lobbies__spinner {
+  border-color: rgba(201, 168, 76, 0.3);
+  border-top-color: var(--gold);
+}
+
+@keyframes public-lobbies-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 520px) {
+  .public-lobbies__card {
+    padding: 1.35rem 1rem 1.15rem;
+  }
+
+  .public-lobbies__back {
+    position: static;
+    display: block;
+    margin-bottom: 0.5rem;
+    text-align: left;
+    padding-left: 0;
+  }
+}

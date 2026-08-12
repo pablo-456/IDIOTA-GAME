@@ -357,6 +357,38 @@
 
 .home__conn-badge--off .home__conn-dot { background: #c0392b; }
 
+.home__conn-badge--fail .home__conn-dot {
+  background: #e67e22;
+}
+
+.home__conn-text {
+  text-align: center;
+  line-height: 1.35;
+  max-width: 16rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 0.8rem;
+}
+
+.home__conn-retry {
+  margin-left: 0.35rem;
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.home__conn-retry:hover {
+  border-color: var(--gold);
+  background: rgba(201, 168, 76, 0.08);
+}
+
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.4; }
@@ -495,6 +527,26 @@
   background: rgba(201,168,76,0.08);
   border-color: var(--gold);
   transform: translateY(-1px);
+}
+
+.home__btn--public {
+  background: transparent;
+  color: var(--cream-dim);
+  border: 1px dashed rgba(201, 168, 76, 0.35);
+  box-shadow: none;
+}
+
+.home__btn--public:not(:disabled):hover {
+  background: rgba(201, 168, 76, 0.08);
+  border-color: var(--gold);
+  border-style: solid;
+  color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.home__btn--soon {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* ── Spinner ── */

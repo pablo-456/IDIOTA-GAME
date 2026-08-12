@@ -3,6 +3,7 @@ import { useSocket } from '../../hooks/useSocket';
 import { useGameActions } from '../../hooks/useGameActions';
 import { useAudio } from '../../hooks/useAudio';
 import { isMusicPlaying } from '../../audio/music';
+import { PUBLIC_ROOMS_ENABLED } from '../../constants/features';
 import MuteButton from '../../components/ui/MuteButton/MuteButton';
 import './Home.css';
 
@@ -22,15 +23,30 @@ const PATCH_NOTES = [
   'Se ha añadido musica y se ha mejorado la experiencia de juego.'
 ];
 
-export default function Home() {
-  const { connected } = useSocket();
+export default function Home({ onGoToPublicLobbies }) {
+  const { connected, connectionPhase, reconnect, wakeServer } = useSocket();
   const { createRoom, joinRoom } = useGameActions();
   const { unlock, startMusic } = useAudio();
   const [username, setUsername]   = useState('');
   const [roomCode, setRoomCode]   = useState('');
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(null); // 'create' | 'join' | null
+  const [slowConnect, setSlowConnect] = useState(false);
   const musicStarted = useRef(false);
+
+  // Wake-up Render + aviso si tarda
+  useEffect(() => {
+    wakeServer();
+  }, [wakeServer]);
+
+  useEffect(() => {
+    if (connected) {
+      setSlowConnect(false);
+      return undefined;
+    }
+    const t = setTimeout(() => setSlowConnect(true), 4000);
+    return () => clearTimeout(t);
+  }, [connected]);
 
   // Primer gesto del usuario (autoplay): desbloquear AudioContext y arrancar musica
   useEffect(() => {
@@ -79,6 +95,21 @@ export default function Home() {
     musicStarted.current = true;
     setLoading('join');
     joinRoom(username.trim(), roomCode.trim().toUpperCase());
+  }
+
+  /**
+   * Salas públicas — para habilitar:
+   * 1) PUBLIC_ROOMS_ENABLED = true en frontend/src/constants/features.js
+   * 2) PUBLIC_ROOMS_ENABLED = true en backend/src/constants/features.js
+   * 3) Reiniciar backend y refrescar frontend
+   */
+  async function handlePublicRooms() {
+    if (!PUBLIC_ROOMS_ENABLED) return;
+    if (!validate()) return;
+    await unlock();
+    await startMusic();
+    musicStarted.current = true;
+    onGoToPublicLobbies?.(username.trim());
   }
 
   return (
@@ -170,9 +201,36 @@ export default function Home() {
         </header>
 
         {/* Indicador de conexión */}
-        <div className={`home__conn-badge ${connected ? 'home__conn-badge--ok' : 'home__conn-badge--off'}`}>
+        <div
+          className={`home__conn-badge ${
+            connected
+              ? 'home__conn-badge--ok'
+              : connectionPhase === 'failed'
+                ? 'home__conn-badge--fail'
+                : 'home__conn-badge--off'
+          }`}
+        >
           <span className="home__conn-dot" />
-          {connected ? 'Conectado al servidor' : 'Conectando…'}
+          <span className="home__conn-text">
+            {connected
+              ? 'Conectado al servidor'
+              : connectionPhase === 'failed'
+                ? 'No se pudo conectar'
+                : slowConnect
+                  ? 'Despertando servidor… puede tardar ~1 min'
+                  : connectionPhase === 'reconnecting'
+                    ? 'Reconectando…'
+                    : 'Conectando…'}
+          </span>
+          {!connected && (
+            <button
+              type="button"
+              className="home__conn-retry"
+              onClick={() => reconnect()}
+            >
+              Reconectar
+            </button>
+          )}
         </div>
 
         {/* Formulario */}
@@ -231,6 +289,34 @@ export default function Home() {
             >
               {loading === 'join' ? <span className="home__spinner" /> : '→'}
               <span>Unirse a Partida</span>
+            </button>
+
+            <div className="home__separator">
+              <span>o</span>
+            </div>
+
+            {/*
+              SALAS PÚBLICAS — habilitar / deshabilitar:
+              - Frontend: frontend/src/constants/features.js → PUBLIC_ROOMS_ENABLED
+              - Backend:  backend/src/constants/features.js → PUBLIC_ROOMS_ENABLED
+              (usa el mismo true/false en ambos; reinicia el backend)
+            */}
+            <button
+              className={`home__btn home__btn--public${!PUBLIC_ROOMS_ENABLED ? ' home__btn--soon' : ''}`}
+              onClick={handlePublicRooms}
+              disabled={!PUBLIC_ROOMS_ENABLED || !connected || loading !== null}
+              title={
+                PUBLIC_ROOMS_ENABLED
+                  ? 'Ver y crear salas públicas'
+                  : 'Salas públicas próximamente'
+              }
+            >
+              <span>◈</span>
+              <span>
+                {PUBLIC_ROOMS_ENABLED
+                  ? 'Salas públicas'
+                  : 'Salas públicas próximamente'}
+              </span>
             </button>
           </div>
         </div>
