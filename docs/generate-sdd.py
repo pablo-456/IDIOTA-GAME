@@ -2,7 +2,6 @@
 """
 Generador de Documentación Técnica IEEE (SDD) — IDIOTA-GAME
 Produce: docs/IDIOTA-Documentacion-Tecnica-IEEE.docx
-Versión 1.1 — incluye salas públicas (feature flag) y refuerzo de conexiones.
 """
 
 from __future__ import annotations
@@ -15,12 +14,11 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Inches, Pt
+from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = Path(__file__).resolve().parent / "IDIOTA-Documentacion-Tecnica-IEEE.docx"
-OUTPUT_FALLBACK = Path(__file__).resolve().parent / "IDIOTA-Documentacion-Tecnica-IEEE-v1.1.docx"
-DOC_VERSION = "1.1"
+DOC_VERSION = "1.0"
 DOC_DATE = date.today().strftime("%d de %B de %Y").replace(
     "January", "enero"
 ).replace("February", "febrero").replace("March", "marzo").replace(
@@ -29,8 +27,7 @@ DOC_DATE = date.today().strftime("%d de %B de %Y").replace(
     "July", "julio"
 ).replace("August", "agosto").replace("September", "septiembre").replace(
     "October", "octubre"
-).replace("November", "noviembre").replace("December", "diciembre"
-)
+).replace("November", "noviembre").replace("December", "diciembre")
 
 FONT_NAME = "Times New Roman"
 BODY_SIZE = Pt(10)
@@ -45,12 +42,14 @@ _table_counter = 0
 _figure_counter = 0
 
 
-def _set_run_font(run, size=BODY_SIZE, bold=False, italic=False):
+def _set_run_font(run, size=BODY_SIZE, bold=False, italic=False, color=None):
     run.font.name = FONT_NAME
     run._element.rPr.rFonts.set(qn("w:eastAsia"), FONT_NAME)
     run.font.size = size
     run.bold = bold
     run.italic = italic
+    if color:
+        run.font.color.rgb = color
 
 
 def _style_paragraph(paragraph, align=WD_ALIGN_PARAGRAPH.JUSTIFY, space_after=6, line_spacing=1.15):
@@ -172,10 +171,7 @@ def add_toc(doc):
 
 def collect_file_tree(root: Path, prefix="") -> list[str]:
     lines = []
-    try:
-        entries = sorted(root.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
-    except OSError:
-        return lines
+    entries = sorted(root.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
     for i, entry in enumerate(entries):
         if entry.name in {".git", "node_modules", "__pycache__", ".cursor"}:
             continue
@@ -224,8 +220,7 @@ def build_revision_table(doc):
         doc,
         ["Versión", "Fecha", "Descripción"],
         [
-            ["1.0", "12 de agosto de 2026", "Documento inicial: arquitectura, diseño backend/frontend, contratos Socket.io y reglas de negocio."],
-            ["1.1", DOC_DATE, "Salas públicas (feature flag), página PublicLobbies, token de sesión sin BD, gracia de reconexión 45 s y refuerzo cliente frente a Render free."],
+            ["1.0", DOC_DATE, "Documento inicial: arquitectura, diseño backend/frontend, contratos Socket.io y reglas de negocio."],
         ],
         caption="Tabla I. Control de revisiones del documento",
     )
@@ -233,6 +228,7 @@ def build_revision_table(doc):
 
 
 def build_document(doc):
+    # ── 1. Introducción ──
     add_heading(doc, "1. Introducción")
     add_heading(doc, "1.1 Propósito", level=2)
     add_paragraph(
@@ -240,17 +236,18 @@ def build_document(doc):
         "El presente Software Design Document (SDD) describe la arquitectura, el diseño "
         "y la implementación del sistema IDIOTA, un juego de cartas multijugador online "
         "en tiempo real. Su objetivo es servir como referencia técnica para desarrolladores, "
-        "mantenedores y evaluadores académicos."
+        "mantenedores y evaluadores académicos que necesiten comprender, extender o auditar el proyecto."
     )
 
     add_heading(doc, "1.2 Alcance", level=2)
     add_paragraph(
         doc,
-        "Este documento cubre el mono-repositorio IDIOTA-GAME: backend Node.js con Socket.io "
-        "y frontend React/Vite. Incluye reglas de negocio, máquina de estados, contratos "
-        "WebSocket, salas públicas (deshabilitadas por flag), sesiones de reconexión en RAM "
-        "y el despliegue actual. Quedan fuera: persistencia en BD, autenticación de usuarios "
-        "completa y sistemas de pago."
+        "Este documento cubre el mono-repositorio IDIOTA-GAME, compuesto por un backend "
+        "Node.js con Socket.io y un frontend React empaquetado con Vite. Se documentan las "
+        "reglas de negocio del juego, la máquina de estados, los contratos de comunicación "
+        "WebSocket, la estructura de componentes del cliente y el despliegue en producción. "
+        "Quedan fuera del alcance: persistencia en base de datos, autenticación de usuarios "
+        "y sistemas de pago o monetización."
     )
 
     add_heading(doc, "1.3 Audiencia", level=2)
@@ -261,357 +258,517 @@ def build_document(doc):
     add_heading(doc, "1.4 Resumen ejecutivo", level=2)
     add_paragraph(
         doc,
-        "IDIOTA es un juego de cartas para 3 a 7 jugadores conectados mediante WebSockets. "
-        "El servidor mantiene el estado en memoria RAM, valida jugadas de forma autoritativa "
-        "y sincroniza el estado con los clientes. El último jugador con cartas es el "
-        "\"idiota\" (perdedor). La versión actual incorpora bases de salas públicas (flag OFF "
-        "en producción) y un mecanismo de token de sesión con gracia de 45 s para mitigar "
-        "desconexiones típicas del plan gratuito de Render."
+        "IDIOTA es un juego de cartas para 3 a 7 jugadores conectados simultáneamente "
+        "mediante WebSockets. El servidor mantiene todo el estado de las partidas en memoria "
+        "RAM, valida las jugadas de forma autoritativa y sincroniza el estado con los clientes "
+        "web. El último jugador que conserva cartas al final de la partida es declarado "
+        "\"idiota\" (perdedor); los demás jugadores que se quedan sin cartas son \"salvados\"."
     )
 
+    # ── 2. Referencias ──
     add_heading(doc, "2. Referencias")
-    for ref in [
+    refs = [
         "[1] README del proyecto — IDIOTA-GAME/README.md",
-        "[2] Reglas internas — .cursor/rules/ (01–06)",
+        "[2] Reglas internas del repositorio — .cursor/rules/ (01–06)",
         "[3] Dependencias backend — backend/package.json",
         "[4] Dependencias frontend — frontend/package.json",
-        "[5] Feature flags — frontend/src/constants/features.js y backend/src/constants/features.js",
-        "[6] Documentación Socket.io — https://socket.io/docs/v4/",
-        "[7] Documentación React — https://react.dev/",
+        "[5] Documentación oficial de Socket.io — https://socket.io/docs/v4/",
+        "[6] Documentación oficial de React — https://react.dev/",
+        "[7] Documentación oficial de Vite — https://vitejs.dev/",
         "[8] Estándar IEEE 1016 — Software Design Descriptions",
-    ]:
+    ]
+    for ref in refs:
         add_bullet(doc, ref)
 
+    # ── 3. Definiciones ──
     add_heading(doc, "3. Definiciones, acrónimos y abreviaturas")
     add_table(
         doc,
         ["Término", "Definición"],
         [
-            ["SDD", "Software Design Document."],
-            ["WebSocket", "Protocolo full-duplex sobre TCP para tiempo real."],
-            ["SRP", "Single Responsibility Principle (SOLID)."],
-            ["LOBBY / SETUP / PLAYING / FINISHED", "Estados de la máquina de partida."],
-            ["Idiota", "Perdedor: último jugador con cartas."],
-            ["Saved", "Jugador sin cartas; pasa a espectador."],
-            ["isPublic", "Marca de sala visible en el listado de lobbies públicos."],
-            ["sessionToken", "UUID de sesión en RAM + localStorage para reconexión."],
-            ["Gracia de desconexión", "45 s antes de expulsar tras un disconnect."],
-            ["PUBLIC_ROOMS_ENABLED", "Feature flag booleano en front y back."],
-            ["Cold start", "Retraso al despertar un servicio dormido (Render free)."],
+            ["SDD", "Software Design Document — documento de diseño de software."],
+            ["WebSocket", "Protocolo de comunicación full-duplex sobre TCP para tiempo real."],
+            ["SRP", "Single Responsibility Principle — principio de responsabilidad única (SOLID)."],
+            ["LOBBY", "Estado inicial de sala: esperando jugadores antes de comenzar."],
+            ["SETUP", "Fase de configuración donde cada jugador elige cartas visibles y mano."],
+            ["PLAYING", "Estado de partida activa con turnos alternados."],
+            ["FINISHED", "Estado terminal: partida concluida con perdedor identificado."],
+            ["Idiota", "Jugador perdedor: el último que conserva cartas al terminar."],
+            ["Saved / Salvado", "Jugador que se queda sin cartas antes del final; pasa a modo espectador."],
+            ["Pile / Pozo", "Pila central de cartas jugadas sobre la mesa."],
+            ["Host", "Primer jugador de la sala; único autorizado a iniciar el setup."],
         ],
         caption="Tabla II. Glosario de términos y acrónimos",
     )
 
+    # ── 4. Descripción general ──
     add_heading(doc, "4. Descripción general del sistema")
+
     add_heading(doc, "4.1 Perspectiva del producto", level=2)
     add_paragraph(
         doc,
-        "Cliente web (React/Vite) ↔ servidor (Node/Express/Socket.io). Sin autenticación "
-        "de cuentas: identificación por socket.id, username y sessionToken efímero. "
-        "Estado de partidas solo en RAM del proceso Node."
+        "IDIOTA opera como una aplicación web cliente-servidor. El cliente (React/Vite) "
+        "se ejecuta en el navegador del jugador y se comunica exclusivamente con el servidor "
+        "mediante Socket.io. No existe capa de persistencia: las salas y partidas viven "
+        "únicamente en la memoria del proceso Node.js. Los jugadores se identifican por "
+        "socket.id (asignado por Socket.io) y un nombre de usuario libre (username) sin "
+        "autenticación ni registro."
     )
 
     add_heading(doc, "4.2 Funciones principales", level=2)
-    for f in [
-        "Crear/unirse a salas privadas con código de 6 caracteres.",
-        "Bases de salas públicas (listado + crear) detrás de feature flag.",
-        "Lobby 3–7 jugadores; fase SETUP; partida por turnos.",
-        "Reconexión con token de sesión (gracia 45 s) sin base de datos.",
-        "Wake-up HTTP /health y reintentos Socket.io frente a cold starts.",
-        "Efectos visuales, overlays y audio en el cliente.",
-    ]:
+    functions = [
+        "Creación de salas con código alfanumérico único de 6 caracteres.",
+        "Unión a salas existentes mediante código compartido.",
+        "Lobby interactivo con validación de mínimo 3 y máximo 7 jugadores.",
+        "Fase de setup con elección estratégica de 4 cartas visibles y 4 en mano privada.",
+        "Partida por turnos con validación de cartas, comodines y recogida de pozo.",
+        "Efectos visuales (overlays) y sistema de audio en el cliente.",
+        "Modo espectador para jugadores salvados.",
+    ]
+    for f in functions:
         add_bullet(doc, f)
 
     add_heading(doc, "4.3 Restricciones de diseño", level=2)
-    add_bullet(doc, "Estado efímero: reinicio/redeploy del servidor borra salas y tokens.")
-    add_bullet(doc, "Validación autoritativa en Game.js.")
-    add_bullet(doc, "Render free puede dormir el backend (~15 min sin tráfico).")
-    add_bullet(doc, "Salas públicas OFF por defecto en features.js (ambos lados).")
+    add_bullet(doc, "Estado efímero en RAM: un reinicio del servidor elimina todas las salas activas.")
+    add_bullet(doc, "Validación autoritativa en backend/src/models/Game.js; el cliente solo refleja el estado recibido.")
+    add_bullet(doc, "CORS restringido a orígenes conocidos: Vercel, localhost y túneles devtunnels.ms.")
+    add_bullet(doc, "Sin base de datos, caché externo ni cola de mensajes.")
 
     add_heading(doc, "4.4 Supuestos y dependencias", level=2)
-    add_bullet(doc, "Node.js 18+, navegador con WebSocket.")
-    add_bullet(doc, "Variables: PORT, FRONTEND_URL, VITE_SERVER_URL.")
-    add_bullet(doc, "Flags locales: PUBLIC_ROOMS_ENABLED en constants/features.js.")
+    add_bullet(doc, "Node.js versión 18 o superior en el servidor.")
+    add_bullet(doc, "Navegador moderno con soporte WebSocket en el cliente.")
+    add_bullet(doc, "Variables de entorno: PORT, FRONTEND_URL (backend); VITE_SERVER_URL (frontend).")
 
+    # ── 5. Arquitectura ──
     add_heading(doc, "5. Arquitectura del sistema")
+
     add_figure(
         doc,
         """┌─────────────────────────────────────────────────────────────┐
 │                    FRONTEND (React + Vite)                     │
-│  Pages: Home / PublicLobbies / Lobby / Game                   │
-│  Hooks: useSocket | useRoomSession | useGameActions | ...     │
-│  localStorage: idiota_room_session (token)                    │
-└───────────────────────────┬───────────────────────────────────┘
-                            │ Socket.io + GET /health (wake)
-┌───────────────────────────▼───────────────────────────────────┐
+│  ┌──────────┐  ┌──────────────────────────────────────────┐ │
+│  │  Pages   │  │  Home  →  Lobby  →  Game                 │ │
+│  └────┬─────┘  └──────────────────────────────────────────┘ │
+│       │                                                      │
+│  ┌────▼──────────────────────────────────────────────────┐  │
+│  │  Hooks: useSocket | useRoomSession | useGameActions   │  │
+│  │         useGameEvents | useAudio                      │  │
+│  └────┬──────────────────────────────────────────────────┘  │
+│       │  Components: SetupPhase, PlayingPhase, Overlays    │
+└───────┼──────────────────────────────────────────────────────┘
+        │  Socket.io (WebSocket)
+┌───────▼──────────────────────────────────────────────────────┐
 │                    BACKEND (Node.js)                            │
-│  server.js → roomController (salas + sesiones + gracia)        │
-│            → Game.js + Deck.js (dominio)                       │
-│  features.js → PUBLIC_ROOMS_ENABLED                            │
-└───────────────────────────────────────────────────────────────┘""",
-        "Arquitectura en capas actualizada (salas públicas y sesiones)",
+│  ┌─────────────┐    ┌──────────────────┐    ┌─────────────┐  │
+│  │  server.js  │───►│ roomController.js│───►│  Game.js    │  │
+│  │  (Transporte)│    │  (Salas/RAM)     │    │  Deck.js    │  │
+│  └─────────────┘    └──────────────────┘    │  (Dominio)  │  │
+│                                              └─────────────┘  │
+│  GET /health  —  Health check HTTP                             │
+└────────────────────────────────────────────────────────────────┘""",
+        "Arquitectura en capas del sistema IDIOTA",
     )
 
     add_heading(doc, "5.1 Estructura del mono-repositorio", level=2)
     add_code_block(
         doc,
         """IDIOTA-GAME/
-├── backend/src/
-│   ├── server.js
-│   ├── constants/features.js
-│   ├── controllers/roomController.js
-│   └── models/Game.js, Deck.js
-├── frontend/src/
-│   ├── constants/features.js, socketEvents.js
-│   ├── utils/roomSession.js
-│   ├── pages/Home, PublicLobbies, Lobby, Game
-│   └── hooks/useSocket, useRoomSession, ...
-└── docs/""",
+├── backend/
+│   ├── package.json
+│   └── src/
+│       ├── server.js              # Express + Socket.io
+│       ├── controllers/
+│       │   └── roomController.js  # Ciclo de vida de salas
+│       └── models/
+│           ├── Game.js            # Reglas y estado de partida
+│           └── Deck.js            # Mazo de 108 cartas
+├── frontend/
+│   ├── package.json
+│   └── src/
+│       ├── App.jsx                # Enrutador por pantallas
+│       ├── pages/                 # Home, Lobby, Game
+│       ├── components/            # UI, overlays, cartas
+│       ├── hooks/                 # Socket, sesión, acciones
+│       ├── constants/             # Eventos y reglas de cartas
+│       └── audio/                 # Motor Web Audio
+└── docs/                          # Documentación generada""",
     )
 
     add_heading(doc, "5.2 Principios de diseño", level=2)
     add_paragraph(
         doc,
-        "SRP: transporte (server.js), salas/sesiones (roomController), reglas (Game.js). "
-        "Frontend: hooks desacoplados; feature flags espejo en front y back."
+        "El proyecto aplica el principio de responsabilidad única (SRP): server.js gestiona "
+        "únicamente transporte y emisión de eventos; Game.js concentra la lógica de negocio; "
+        "roomController.js administra el ciclo de vida de salas. En el frontend, los hooks "
+        "desacoplan la conexión de red de los componentes visuales, que permanecen "
+        "presentacionales y reciben datos y callbacks como props."
     )
 
+    # ── 6. Backend ──
     add_heading(doc, "6. Diseño detallado — Backend")
+
     add_heading(doc, "6.1 Máquina de estados", level=2)
     add_figure(
         doc,
-        "LOBBY ──start_setup──► SETUP ──allReady──► PLAYING ──gameOver──► FINISHED",
-        "Transiciones de estado de una partida",
+        "LOBBY  ──start_setup──►  SETUP  ──allReady──►  PLAYING  ──gameOver──►  FINISHED",
+        "Transiciones de estado de una partida IDIOTA",
     )
-
-    add_heading(doc, "6.2 Modelo de jugador", level=2)
     add_table(
         doc,
-        ["Campo", "Descripción"],
+        ["Estado", "Descripción", "Transición"],
         [
-            ["id", "socket.id actual (cambia en reattach)."],
-            ["username", "Nombre visible."],
-            ["sessionToken", "UUID de sesión para rejoin."],
-            ["isConnected", "false durante gracia de desconexión."],
-            ["manoPrivada / cartasVisibles / cartasOcultas", "Zonas de cartas."],
-            ["isReady / isSaved", "Setup listo / salvado."],
+            ["LOBBY", "Sala abierta; jugadores se unen (3–7).", "Host ejecuta start_setup → SETUP"],
+            ["SETUP", "Reparto y elección de cartas visibles/mano.", "Todos confirman → PLAYING"],
+            ["PLAYING", "Turnos alternados; validación de jugadas.", "Último con cartas → FINISHED"],
+            ["FINISHED", "Partida terminada; perdedor identificado.", "Sala se destruye al vaciarse"],
         ],
-        caption="Tabla III. Campos relevantes del jugador",
+        caption="Tabla III. Estados de la partida",
     )
 
-    add_heading(doc, "6.3 Mazo y turnos", level=2)
-    add_paragraph(
-        doc,
-        "Mazo de 108 cartas (Fisher-Yates). Turnos: mismo valor y power ≥ pila; "
-        "especiales 2/8/JOKER. nextTurn() salta jugadores isSaved o isConnected===false."
-    )
-
-    add_heading(doc, "6.4 Gestión de salas y sesiones", level=2)
-    add_paragraph(
-        doc,
-        "roomController mantiene games{}, playerRoomMap, sessionByToken{} y "
-        "pendingDisconnects{}. Al disconnect se llama beginPendingDisconnect (gracia 45 s). "
-        "rejoinSession reatacha el nuevo socket.id. leave_room expulsa de inmediato. "
-        "Tras la gracia, finalizeDisconnect elimina al jugador como antes."
-    )
-
-    add_heading(doc, "6.5 Endpoint HTTP", level=2)
+    add_heading(doc, "6.2 Modelo de datos del jugador", level=2)
     add_table(
         doc,
-        ["Método", "Ruta", "Uso"],
-        [["GET", "/health", "Health check y wake-up del cold start de Render."]],
-        caption="Tabla IV. Endpoints HTTP",
+        ["Campo", "Tipo", "Descripción"],
+        [
+            ["id", "string", "socket.id del jugador (identificador de sesión)."],
+            ["username", "string", "Nombre visible elegido al unirse."],
+            ["manoPrivada", "Card[]", "Cartas en mano; ocultas para rivales."],
+            ["cartasVisibles", "Card[]", "4 cartas boca arriba visibles para todos."],
+            ["cartasOcultas", "Card[]", "4 cartas boca abajo; se usan al agotar mano y visibles."],
+            ["isReady", "boolean", "Confirmó elección en fase SETUP."],
+            ["saved", "boolean", "True si el jugador se quedó sin cartas (salvado)."],
+        ],
+        caption="Tabla IV. Estructura del objeto jugador",
     )
 
+    add_heading(doc, "6.3 Mazo (Deck.js)", level=2)
+    add_paragraph(
+        doc,
+        "El mazo consta de 108 cartas: dos barajas de póker completas (104 cartas) más "
+        "4 comodines JOKER adicionales. La mezcla utiliza el algoritmo Fisher-Yates (Knuth Shuffle) "
+        "con complejidad O(n), garantizando distribución uniforme."
+    )
+    add_table(
+        doc,
+        ["Tipo", "Valor", "Efecto"],
+        [
+            ["Ordinaria", "3–7, 9, 10, J, Q, K, A", "Jerarquía: 3(3) < … < A(14). Debe ser ≥ tope de pila."],
+            ["Reset", "2", "Reinicia la pila; cualquier carta puede jugarse después."],
+            ["Burn", "8", "Quema la pila completa; turno extra para quien la juega."],
+            ["Burn", "JOKER", "Igual que el 8; 4 en total (2 por baraja)."],
+        ],
+        caption="Tabla V. Tipos de carta y efectos especiales",
+    )
+
+    add_heading(doc, "6.4 Lógica de turnos", level=2)
+    add_bullet(doc, "El jugador activo juega una o más cartas del mismo valor cuyo power ≥ pileTopPower.")
+    add_bullet(doc, "Prioridad de zonas: manoPrivada → cartasVisibles → cartasOcultas.")
+    add_bullet(doc, "Regla Azar: carta oculta demasiado débil se revela; el jugador recoge el pozo tras 3 s.")
+    add_bullet(doc, "Recogida voluntaria o forzosa: cartas del pozo pasan a manoPrivada; el turno NO avanza.")
+    add_bullet(doc, "Cuatro cartas iguales consecutivas en la pila queman automáticamente la mesa.")
+    add_bullet(doc, "Al final del turno, el jugador roba del mazo hasta tener 4 cartas en mano (si hay mazo).")
+
+    add_heading(doc, "6.5 Gestión de salas (roomController.js)", level=2)
+    add_paragraph(
+        doc,
+        "El controlador mantiene dos estructuras en memoria: games (roomId → instancia Game) "
+        "y playerRoomMap (socketId → roomId) para búsqueda O(1) en desconexiones. "
+        "Las salas se destruyen cuando quedan vacías o la partida termina sin jugadores suficientes."
+    )
+
+    add_heading(doc, "6.6 Endpoint HTTP", level=2)
+    add_table(
+        doc,
+        ["Método", "Ruta", "Respuesta"],
+        [
+            ["GET", "/health", "{ status: 'ok', rooms: [...], uptime: number }"],
+        ],
+        caption="Tabla VI. Endpoints HTTP del backend",
+    )
+
+    # ── 7. Socket.io ──
     add_heading(doc, "7. Contrato de comunicación (Socket.io)")
+
     add_heading(doc, "7.1 Eventos cliente → servidor", level=2)
     add_table(
         doc,
-        ["Evento", "Payload", "Notas"],
+        ["Evento", "Payload", "Validación / Efecto"],
         [
-            ["create_room", "{ username, isPublic? }", "isPublic solo si flag ON."],
-            ["join_room", "{ roomId, username }", "Solo LOBBY."],
-            ["start_setup / confirm_setup", "{ roomId, ... }", "Host / elección visibles."],
-            ["play_turn / pick_up_pile", "{ roomId, ... }", "Jugada / recogida."],
-            ["list_public_rooms", "—", "Solo si PUBLIC_ROOMS_ENABLED."],
-            ["rejoin_session", "{ sessionToken }", "Reenganche post-disconnect."],
-            ["leave_room", "{ roomId? }", "Salida voluntaria sin gracia."],
+            ["create_room", "{ username }", "Crea sala; emite room_created y room_updated."],
+            ["join_room", "{ roomId, username }", "Une a sala LOBBY; emite room_joined y room_updated."],
+            ["start_setup", "{ roomId }", "Solo host; LOBBY → SETUP; emite setup_started por jugador."],
+            ["confirm_setup", "{ roomId, idsVisibles[] }", "Exactamente 4 IDs visibles; si todos listos → PLAYING."],
+            ["play_turn", "{ roomId, cardIds[] }", "Valida y ejecuta jugada; sincroniza con game_started."],
+            ["pick_up_pile", "{ roomId, voluntary }", "Recoge pozo; sincroniza estado a todos."],
         ],
-        caption="Tabla V. Eventos Cliente → Servidor",
+        caption="Tabla VII. Eventos Socket.io — Cliente → Servidor",
     )
 
     add_heading(doc, "7.2 Eventos servidor → cliente", level=2)
     add_table(
         doc,
-        ["Evento", "Rol"],
+        ["Evento", "Destinatario", "Payload principal"],
         [
-            ["room_created / room_joined", "Incluyen sessionToken + estado privado."],
-            ["session_restored", "Rejoin exitoso; restaura LOBBY o GAME."],
-            ["player_pending_disconnect", "Aviso de gracia 45 s + isConnected false."],
-            ["player_disconnected", "Expulsión definitiva tras gracia o leave."],
-            ["public_rooms_updated", "Listado de lobbies públicos."],
-            ["room_updated / setup_started / game_started / ...", "Sync de partida (sin cambios mayores)."],
+            ["room_created", "Creador", "{ roomId, state } — estado privado del creador."],
+            ["room_joined", "Nuevo jugador", "{ roomId, state } — estado privado del joiner."],
+            ["room_updated", "Toda la sala", "Estado público (sin manos rivales)."],
+            ["setup_started", "Cada jugador", "{ state } — cartas de elección privadas."],
+            ["game_started", "Cada jugador", "{ state, firstPlayerId?, message? } — sync de juego."],
+            ["card_revealed", "Toda la sala", "{ playerId, card, mustPickUp } — reveal dramático."],
+            ["special_play", "Toda la sala", "{ playerId, card, burned } — animación 8/Joker."],
+            ["player_saved", "Jugador salvado", "{ message, savedPlayers } — notificación personal."],
+            ["player_disconnected", "Sala restante", "{ socketId, advanceTurn, state }."],
+            ["game_over", "Toda la sala", "{ loserId, loserName, savedPlayers, reason }."],
+            ["error", "Emisor", "{ message } — error de validación."],
         ],
-        caption="Tabla VI. Eventos Servidor → Cliente (ampliados)",
+        caption="Tabla VIII. Eventos Socket.io — Servidor → Cliente",
     )
 
-    add_heading(doc, "7.3 Diagrama de reconexión", level=2)
+    add_heading(doc, "7.3 Nota técnica de sincronización", level=2)
+    add_paragraph(
+        doc,
+        "Durante la fase PLAYING, el servidor reutiliza el evento game_started como mecanismo "
+        "de sincronización de estado completo (no existe un evento state_updated dedicado). "
+        "Los clientes deben tratar game_started tanto como inicio de partida (cuando incluye "
+        "firstPlayerId) como actualización intermedia de estado durante el juego."
+    )
+
+    add_heading(doc, "7.4 Diagrama de secuencia — Flujo feliz", level=2)
     add_figure(
         doc,
-        """Cliente                 Servidor
-   │── create/join ────────►│
-   │◄── sessionToken ───────│  (localStorage)
-   │        ...             │
-   │──x disconnect          │
-   │                        │ markDisconnected + timer 45s
-   │── connect ─────────────►│
-   │── rejoin_session ──────►│
-   │◄── session_restored ───│  (reattach socket.id)
-   │                        │  (si no: finalizeDisconnect)""",
-        "Flujo de token de sesión y gracia de desconexión",
+        """Jugador A          Servidor           Jugadores B..N
+    │                    │                      │
+    │── create_room ────►│                      │
+    │◄── room_created ───│                      │
+    │                    │                      │
+    │                    │◄── join_room ────────│
+    │                    │── room_joined ──────►│
+    │◄── room_updated ───┼── room_updated ──────►│
+    │                    │                      │
+    │── start_setup ────►│                      │
+    │◄── setup_started ──┼── setup_started ─────►│
+    │                    │                      │
+    │── confirm_setup ──►│◄── confirm_setup ────│
+    │◄── game_started ───┼── game_started ─────►│
+    │                    │                      │
+    │── play_turn ──────►│                      │
+    │◄── game_started ───┼── game_started ─────►│
+    │       ...          │         ...          │
+    │◄── game_over ──────┼── game_over ────────►│""",
+        "Secuencia de eventos desde creación de sala hasta fin de partida",
     )
 
+    # ── 8. Frontend ──
     add_heading(doc, "8. Diseño detallado — Frontend")
-    add_heading(doc, "8.1 Navegación", level=2)
+
+    add_heading(doc, "8.1 Navegación por pantallas", level=2)
+    add_paragraph(
+        doc,
+        "El frontend no utiliza React Router. La navegación se controla mediante el estado "
+        "screen del hook useRoomSession con tres valores: HOME, LOBBY y GAME. "
+        "App.jsx renderiza condicionalmente Home, Lobby o Game según el valor actual."
+    )
     add_figure(
         doc,
-        "HOME → PUBLIC_LOBBIES (flag) → LOBBY → GAME\n"
-        "Al connect: si hay token en localStorage → rejoin_session automático",
-        "Flujo de pantallas y auto-rejoin",
+        "HOME ──create/join──► LOBBY ──setup_started──► GAME (SETUP)\n"
+        "                                              │\n"
+        "                                              ▼\n"
+        "                                         GAME (PLAYING)\n"
+        "                                              │\n"
+        "                                              ▼\n"
+        "                                         GAME (FINISHED)",
+        "Flujo de navegación del cliente",
     )
 
-    add_heading(doc, "8.2 Hooks", level=2)
+    add_heading(doc, "8.2 Capas de hooks", level=2)
     add_table(
         doc,
-        ["Hook", "Responsabilidad"],
+        ["Hook", "Archivo", "Responsabilidad"],
         [
-            ["useSocket", "Singleton Socket.io; fases connecting/connected/reconnecting/failed; wakeServer(); reconnect()."],
-            ["useRoomSession", "Pantallas, gameState, persistencia token, leave_room al volver a Home."],
-            ["useGameActions", "Emits: create/join/play/.../rejoinSession/leaveRoom."],
-            ["useGameEvents / useAudio", "Overlays FX y audio."],
+            ["useSocket", "hooks/useSocket.js", "Conexión singleton Socket.io; emit/on/off; detección URL prod/dev."],
+            ["useRoomSession", "hooks/useRoomSession.js", "Estado de sesión, navegación HOME→LOBBY→GAME, gameState."],
+            ["useGameActions", "hooks/useGameActions.js", "Emisión de eventos al servidor (createRoom, playTurn, etc.)."],
+            ["useGameEvents", "hooks/useGameEvents.js", "Estado local de overlays: reveal, special, crown, saved."],
+            ["useAudio", "hooks/useAudio.js", "Motor Web Audio, mute, SFX y música de fondo."],
         ],
-        caption="Tabla VII. Hooks del frontend",
+        caption="Tabla IX. Hooks personalizados del frontend",
     )
 
-    add_heading(doc, "8.3 Salas públicas (UI)", level=2)
+    add_heading(doc, "8.3 Componentes principales", level=2)
+    add_table(
+        doc,
+        ["Categoría", "Componente", "Función"],
+        [
+            ["Páginas", "Home", "Formulario username/código; crear o unirse a sala."],
+            ["Páginas", "Lobby", "Lista de jugadores, código de sala, botón iniciar (host)."],
+            ["Páginas", "Game", "Shell principal; compone fases y overlays."],
+            ["Fases", "SetupPhase", "Animación de reparto y selección de 4 cartas visibles."],
+            ["Fases", "PlayingPhase", "Mesa activa: mano, oponentes, pozo, acciones."],
+            ["Fases", "SpectatorView", "Vista de solo lectura para jugadores salvados."],
+            ["Cartas", "Card, PileDisplay", "Renderizado de carta individual y pila central."],
+            ["Mesa", "BoardCenter, OpponentsRow, MyVisiblesPanel", "Layout de la mesa de juego."],
+            ["Overlays", "DealOverlay, StartRouletteOverlay", "Animaciones de reparto y ruleta inicial."],
+            ["Overlays", "CardRevealOverlay, SpecialPlayOverlay", "Efectos de reveal y cartas especiales."],
+            ["Overlays", "CrownOverlay", "Revelación del perdedor al finalizar."],
+            ["UI", "MuteButton", "Control flotante de silencio de audio."],
+        ],
+        caption="Tabla X. Componentes React del frontend",
+    )
+
+    add_heading(doc, "8.4 Identidad visual", level=2)
     add_paragraph(
         doc,
-        "Home muestra el botón de salas públicas. Con PUBLIC_ROOMS_ENABLED=false "
-        "aparece deshabilitado: \"Salas públicas próximamente\". Con true, navega a "
-        "PublicLobbies (lista + crear sala pública). Lobby reutilizado: si isPublic, "
-        "muestra \"Este lobby es público\"."
+        "La interfaz sigue una estética de casino oscuro definida en frontend/src/styles/theme.css. "
+        "Variables CSS principales: fondo verde fieltro (--felt), acentos dorados (--gold), "
+        "texto crema (--cream). Tipografías: Playfair Display (títulos) y EB Garamond (cuerpo). "
+        "Las cartas seleccionadas usan transform: translateY para efecto de elevación."
     )
 
-    add_heading(doc, "8.4 Feature flags", level=2)
-    add_code_block(
-        doc,
-        """// frontend/src/constants/features.js
-export const PUBLIC_ROOMS_ENABLED = false;
-
-// backend/src/constants/features.js
-const PUBLIC_ROOMS_ENABLED = false;
-module.exports = { PUBLIC_ROOMS_ENABLED };""",
-    )
+    add_heading(doc, "8.5 Resolución de URL del servidor", level=2)
     add_paragraph(
         doc,
-        "Ambos deben coincidir. Activar: true en los dos archivos, reiniciar backend "
-        "y refrescar/redeploy frontend."
+        "El hook useSocket detecta automáticamente la URL del backend en este orden: "
+        "(1) variable VITE_SERVER_URL si está definida; (2) en desarrollo, localhost:3000 "
+        "o túnel devtunnels con puerto 3000; (3) en producción, https://idiota-backend.onrender.com."
     )
 
-    add_heading(doc, "8.5 Estabilidad de conexión (cliente)", level=2)
-    add_bullet(doc, "reconnectionAttempts: Infinity; delayMax 10 s; timeout 20 s.")
-    add_bullet(doc, "wakeServer(): fetch GET /health (hasta ~60 s) al montar Home/sesión.")
-    add_bullet(doc, "UI: mensaje de despertar tras 4 s; botón Reconectar; banner en Lobby/Game.")
-    add_bullet(doc, "utils/roomSession.js: save/load/clear de { token, roomId, username }.")
-
+    # ── 9. Reglas de negocio ──
     add_heading(doc, "9. Reglas de negocio del juego")
-    add_bullet(doc, "SETUP: 4 ocultas + 8 a elegir → 4 visibles + 4 mano.")
-    add_bullet(doc, "Jugada: mismo valor, power ≥ pila (salvo 2/8/Joker).")
-    add_bullet(doc, "Recogida voluntaria/forzosa: el mismo jugador abre la ronda.")
-    add_bullet(doc, "Último con cartas = idiota. Mínimo 3, máximo 7 jugadores.")
 
+    add_heading(doc, "9.1 Reparto inicial (SETUP)", level=2)
+    add_bullet(doc, "Cada jugador recibe 4 cartas ocultas (cartasOcultas) que no ve hasta usarlas.")
+    add_bullet(doc, "Recibe 8 cartas adicionales para elegir: 4 quedan visibles, 4 en mano privada.")
+    add_bullet(doc, "Todos deben confirmar antes de pasar a PLAYING.")
+    add_bullet(doc, "Se elige al primer jugador al azar mediante ruleta visual en el cliente.")
+
+    add_heading(doc, "9.2 Validación de jugadas", level=2)
+    add_bullet(doc, "Las cartas jugadas deben ser del mismo valor.")
+    add_bullet(doc, "El power de la carta más alta jugada debe ser ≥ pileTopPower (salvo pila vacía o tras reset).")
+    add_bullet(doc, "El '2' (reset) puede jugarse sobre cualquier carta y deja la pila en power 0.")
+    add_bullet(doc, "El '8' y JOKER queman la pila y otorgan turno extra.")
+
+    add_heading(doc, "9.3 Reglas de recogida", level=2)
+    add_bullet(doc, "Penalización: si no puede responder, recoge todo el pozo a su mano privada.")
+    add_bullet(doc, "Recogida voluntaria: en su turno puede elegir recoger el pozo por estrategia.")
+    add_bullet(doc, "En ambos casos el turno NO avanza; el mismo jugador abre la nueva ronda con pila vacía.")
+
+    add_heading(doc, "9.4 Condición de victoria y derrota", level=2)
+    add_paragraph(
+        doc,
+        "Un jugador se salva (saved) cuando se queda sin cartas en las tres zonas "
+        "(mano, visibles y ocultas). La partida termina cuando queda un solo jugador "
+        "con cartas: ese jugador es declarado idiota (perdedor). Mínimo 3 jugadores "
+        "para iniciar; máximo 7 por sala."
+    )
+
+    # ── 10. Despliegue ──
     add_heading(doc, "10. Despliegue e infraestructura")
     add_table(
         doc,
-        ["Componente", "Plataforma", "Notas"],
+        ["Componente", "Plataforma", "Configuración"],
         [
-            ["Frontend", "Vercel", "Vite build; VITE_SERVER_URL."],
-            ["Backend", "Render", "Free puede dormir; /health + reintentos mitigan."],
-            ["Local", "localhost", "Backend :3000, Frontend :5173."],
+            ["Frontend", "Vercel", "Build: npm run build (Vite). Env: VITE_SERVER_URL."],
+            ["Backend", "Render", "Start: node src/server.js. Env: PORT, FRONTEND_URL."],
+            ["Desarrollo local", "localhost", "Backend :3000, Frontend :5173 (npm run dev)."],
         ],
-        caption="Tabla VIII. Despliegue",
-    )
-    add_paragraph(
-        doc,
-        "Recomendación operativa: un monitor externo (p. ej. UptimeRobot) puede "
-        "consultar GET /health cada 5–10 minutos para reducir cold starts. No forma "
-        "parte del código del repositorio."
+        caption="Tabla XI. Entornos de despliegue",
     )
 
+    add_heading(doc, "10.1 Instalación local", level=2)
+    add_code_block(
+        doc,
+        """# Backend
+cd backend
+npm install
+npm start          # Servidor en puerto 3000
+
+# Frontend (terminal separada)
+cd frontend
+npm install
+npm run dev        # Cliente en puerto 5173""",
+    )
+
+    add_heading(doc, "10.2 CORS y orígenes permitidos", level=2)
+    add_bullet(doc, "process.env.FRONTEND_URL (configurable)")
+    add_bullet(doc, "https://idiota-game.vercel.app")
+    add_bullet(doc, "http://localhost:5173 y http://localhost:3000")
+    add_bullet(doc, "Cualquier origen *.devtunnels.ms (desarrollo remoto)")
+
+    # ── 11. Limitaciones ──
     add_heading(doc, "11. Limitaciones conocidas y trabajo futuro")
     add_table(
         doc,
-        ["Ítem", "Estado"],
+        ["Limitación / Roadmap", "Estado"],
         [
-            ["Salas públicas (código listo, flag OFF)", "Bases listas; no activas en prod"],
-            ["Token de sesión + gracia 45 s", "Implementado (RAM; no sobrevive redeploy)"],
-            ["Wake-up /health + reintentos Socket", "Implementado"],
-            ["Persistencia BD / historial", "Pendiente"],
-            ["Auth de usuarios", "Pendiente"],
-            ["Tests automatizados de reglas", "Pendiente"],
-            ["Música de suspenso fase final", "Roadmap"],
+            ["Sin persistencia de usuarios ni historial de partidas", "Actual"],
+            ["Sin autenticación ni sistema anti-trampas avanzado", "Actual"],
+            ["Salas públicas (matchmaking automático)", "Planificado — necesidades.txt"],
+            ["Música de suspenso en fase final", "Planificado — necesidades.txt"],
         ],
-        caption="Tabla IX. Limitaciones y hoja de ruta",
+        caption="Tabla XII. Limitaciones y hoja de ruta",
     )
 
-    add_heading(doc, "Apéndice A. Árbol de archivos (extracto)")
+    # ── 12. Apéndices ──
+    add_heading(doc, "Apéndice A. Árbol de archivos del proyecto")
     tree_lines = collect_file_tree(ROOT)
-    add_code_block(doc, "IDIOTA-GAME/\n" + "\n".join(tree_lines[:90]))
-    if len(tree_lines) > 90:
-        add_paragraph(doc, f"(… {len(tree_lines) - 90} entradas omitidas)", italic=True)
+    add_code_block(doc, "IDIOTA-GAME/\n" + "\n".join(tree_lines[:80]))
+    if len(tree_lines) > 80:
+        add_paragraph(doc, f"(… {len(tree_lines) - 80} entradas adicionales omitidas por brevedad)", italic=True)
 
-    add_heading(doc, "Apéndice B. Dependencias")
+    add_heading(doc, "Apéndice B. Dependencias del proyecto")
+    add_paragraph(doc, "Backend (backend/package.json):", bold=True)
     add_table(
         doc,
-        ["Paquete", "Versión", "Capa"],
+        ["Paquete", "Versión", "Uso"],
         [
-            ["express", "^4.22.2", "Backend"],
-            ["socket.io", "^4.8.3", "Backend"],
-            ["react / react-dom", "^18.2.0", "Frontend"],
-            ["socket.io-client", "^4.7.2", "Frontend"],
-            ["vite", "^5.0.8", "Frontend"],
+            ["express", "^4.22.2", "Servidor HTTP y endpoint /health."],
+            ["socket.io", "^4.8.3", "Comunicación WebSocket bidireccional."],
+            ["cors", "^2.8.6", "Declarado; CORS configurado en Socket.io."],
+            ["nodemon", "^3.0.2", "Recarga en desarrollo (devDependency)."],
         ],
-        caption="Tabla X. Dependencias principales",
+        caption="Tabla XIII. Dependencias del backend",
+    )
+    add_paragraph(doc, "Frontend (frontend/package.json):", bold=True)
+    add_table(
+        doc,
+        ["Paquete", "Versión", "Uso"],
+        [
+            ["react", "^18.2.0", "Biblioteca de interfaz de usuario."],
+            ["react-dom", "^18.2.0", "Renderizado DOM de React."],
+            ["socket.io-client", "^4.7.2", "Cliente WebSocket."],
+            ["vite", "^5.0.8", "Bundler y servidor de desarrollo."],
+            ["@vitejs/plugin-react", "^4.2.1", "Plugin React para Vite."],
+        ],
+        caption="Tabla XIV. Dependencias del frontend",
     )
 
-    add_heading(doc, "Apéndice C. Payloads de ejemplo")
-    add_paragraph(doc, "room_created (con sesión):", bold=True)
-    add_code_block(
-        doc,
-        '{ "roomId": "ABC123", "sessionToken": "uuid-...", "state": { "status": "LOBBY", "isPublic": false, ... } }',
-    )
-    add_paragraph(doc, "rejoin_session:", bold=True)
-    add_code_block(doc, '{ "sessionToken": "uuid-..." }')
-    add_paragraph(doc, "player_pending_disconnect:", bold=True)
-    add_code_block(
-        doc,
-        '{ "playerId": "...", "username": "Ana", "graceMs": 45000, "state": { "players": [{ "isConnected": false, ... }] } }',
+    add_heading(doc, "Apéndice C. Ejemplos de payloads JSON")
+    add_paragraph(doc, "create_room (cliente → servidor):", bold=True)
+    add_code_block(doc, '{ "username": "Ana" }')
+    add_paragraph(doc, "room_created (servidor → cliente):", bold=True)
+    add_code_block(doc, '{ "roomId": "ABC123", "state": { "status": "LOBBY", "players": [...] } }')
+    add_paragraph(doc, "play_turn (cliente → servidor):", bold=True)
+    add_code_block(doc, '{ "roomId": "ABC123", "cardIds": ["K♠_x7f2a", "K♥_b3c9"] }')
+    add_paragraph(doc, "game_over (servidor → cliente):", bold=True)
+    add_code_block(doc,
+        '{ "loserId": "socket_xyz", "loserName": "Bob", '
+        '"savedPlayers": ["Ana", "Carlos"], "reason": "El último jugador con cartas es el idiota." }'
     )
 
-    add_heading(doc, "Apéndice D. Guía rápida")
-    add_bullet(doc, "Backend: cd backend && npm install && npm start")
-    add_bullet(doc, "Frontend: cd frontend && npm install && npm run dev")
-    add_bullet(doc, "Activar salas públicas: true en ambos features.js + reinicio.")
-    add_bullet(doc, "Health: GET http://localhost:3000/health")
-    add_bullet(doc, "Regenerar este documento: python docs/generate-sdd.py")
+    add_heading(doc, "Apéndice D. Guía rápida para desarrolladores")
+    add_bullet(doc, "Clonar el repositorio y ejecutar npm install en backend/ y frontend/.")
+    add_bullet(doc, "Iniciar backend con npm start (puerto 3000).")
+    add_bullet(doc, "Iniciar frontend con npm run dev (puerto 5173).")
+    add_bullet(doc, "Abrir http://localhost:5173 en el navegador.")
+    add_bullet(doc, "Constantes de eventos compartidas: frontend/src/constants/socketEvents.js.")
+    add_bullet(doc, "Reglas de negocio autoritativas: backend/src/models/Game.js.")
+    add_bullet(doc, "Health check del servidor: GET http://localhost:3000/health.")
 
 
 def main():
-    global _table_counter, _figure_counter
-    _table_counter = 0
-    _figure_counter = 0
-
     doc = Document()
+
+    # Márgenes IEEE aproximados (1 pulgada)
     for section in doc.sections:
         section.top_margin = Inches(1)
         section.bottom_margin = Inches(1)
@@ -620,20 +777,16 @@ def main():
 
     build_cover(doc)
     build_revision_table(doc)
+
     add_heading(doc, "Tabla de contenidos")
     add_toc(doc)
     doc.add_page_break()
+
     build_document(doc)
 
     os.makedirs(OUTPUT.parent, exist_ok=True)
-    try:
-        doc.save(str(OUTPUT))
-        out = OUTPUT
-    except PermissionError:
-        doc.save(str(OUTPUT_FALLBACK))
-        out = OUTPUT_FALLBACK
-        print(f"AVISO: {OUTPUT.name} está bloqueado (¿Word abierto?). Guardado como {out.name}")
-    print(f"Documento generado: {out}")
+    doc.save(str(OUTPUT))
+    print(f"Documento generado: {OUTPUT}")
     print(f"Tablas: {_table_counter} | Figuras: {_figure_counter}")
 
 
