@@ -1,8 +1,9 @@
-import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import Card from '../../cards/Card/Card';
 import OpponentsRow from '../OpponentsRow/OpponentsRow';
 import BoardCenter from '../BoardCenter/BoardCenter';
 import { getPileTopPower, canPlayAgainstPile } from '../../../constants/cardRules';
+import { useAudio } from '../../../hooks/useAudio';
 import './PlayingPhase.css';
 
 /**
@@ -11,6 +12,7 @@ import './PlayingPhase.css';
  */
 export default function PlayingPhase({ gameState, myId, onPlayCards, onPickUp }) {
   const [selectedCards, setSelectedCards] = useState(new Set());
+  const { setMusicMood } = useAudio();
 
   const myHand = gameState.myHand;
   const isMyTurn = gameState.currentPlayerId === myId;
@@ -24,6 +26,14 @@ export default function PlayingPhase({ gameState, myId, onPlayCards, onPickUp })
     if (myHand.cartasOcultas?.length > 0) return 'cartasOcultas';
     return null;
   })();
+
+  // Música de suspenso en fase de cartas ocultas (azar)
+  useEffect(() => {
+    setMusicMood(activeZone === 'cartasOcultas' ? 'suspense' : 'ambient');
+    return () => {
+      setMusicMood('ambient');
+    };
+  }, [activeZone, setMusicMood]);
 
   const activeCards = myHand?.[activeZone] ?? [];
   const pileTopPower = getPileTopPower(pile);

@@ -43,6 +43,7 @@ const { Server } = require('socket.io');
 
 const roomController = require('./controllers/roomController');
 const { PUBLIC_ROOMS_ENABLED } = require('./constants/features');
+const { isOffensiveUsername } = require('./utils/usernameModeration');
 
 // ---------------------------------------------------------------------------
 // Configuración del servidor
@@ -170,6 +171,9 @@ io.on('connection', (socket) => {
     if (!username?.trim()) {
       return emitError(socket, 'Se requiere un nombre de usuario.');
     }
+    if (isOffensiveUsername(username)) {
+      return emitError(socket, 'Ese nombre no está permitido.');
+    }
 
     // isPublic solo se respeta si el feature está habilitado en el servidor
     const makePublic = PUBLIC_ROOMS_ENABLED && Boolean(isPublic);
@@ -208,6 +212,9 @@ io.on('connection', (socket) => {
   socket.on('join_room', ({ roomId, username } = {}) => {
     if (!roomId?.trim() || !username?.trim()) {
       return emitError(socket, 'Se requieren roomId y username.');
+    }
+    if (isOffensiveUsername(username)) {
+      return emitError(socket, 'Ese nombre no está permitido.');
     }
 
     const code = roomId.trim().toUpperCase();

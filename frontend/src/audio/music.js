@@ -1,9 +1,16 @@
 /**
  * Música ambiental procedural — pad suave + arpegio lento de mesa de cartas.
  * Solo ondas sine + filtro lowpass para evitar zumbido/estática.
+ *
+ * Moods: ambient (lounge) | suspense (cartas ocultas).
  */
 
 import { getContext, getMusicDestination } from './audioEngine';
+import {
+  startSuspenseMusic,
+  stopSuspenseMusic,
+  isSuspensePlaying,
+} from './suspenseMusic';
 
 /** Notas del arpegio (Hz) — ambiente calmado tipo lounge */
 const ARP = [196, 246.94, 293.66, 369.99, 293.66, 246.94];
@@ -13,6 +20,8 @@ let running = false;
 let timers = [];
 let padNodes = [];
 let musicFilter = null;
+/** @type {'ambient' | 'suspense' | null} */
+let currentMood = null;
 
 function clearTimers() {
   timers.forEach(clearTimeout);
@@ -53,7 +62,6 @@ function startPads(ctx, dest) {
     osc.frequency.value = freq;
     gain.gain.value = 0.001;
     const t0 = ctx.currentTime;
-    // Pads muy suaves; el más grave un poco más presente
     const peak = (0.018 / (i + 1)) * (i === 0 ? 1.15 : 1);
     gain.gain.exponentialRampToValueAtTime(peak, t0 + 1.4);
     osc.connect(gain);
@@ -84,6 +92,12 @@ function scheduleArpeggio(ctx, dest, step = 0) {
   timers.push(id);
 }
 
+function stopAmbientOnly() {
+  running = false;
+  clearTimers();
+  stopPads();
+}
+
 export async function startMusic() {
   const ctx = getContext();
   const rawDest = getMusicDestination();
@@ -99,21 +113,50 @@ export async function startMusic() {
   if (ctx.state !== 'running') return;
 
   running = true;
+  currentMood = 'ambient';
   try {
     const dest = getFilteredDest(ctx, rawDest);
     startPads(ctx, dest);
     scheduleArpeggio(ctx, dest, 0);
   } catch {
     running = false;
+    currentMood = null;
   }
 }
 
 export function stopMusic() {
-  running = false;
-  clearTimers();
-  stopPads();
+  stopAmbientOnly();
+  stopSuspenseMusic();
+  currentMood = null;
 }
 
 export function isMusicPlaying() {
-  return running;
+  return running || isSuspensePlaying();
+}
+
+/**
+ * Cambia entre ambiente lounge y suspense (fase ocultas).
+ * Idempotente: no reinicia si ya está en ese mood.
+ * @param {'ambient' | 'suspense'} mood
+ */
+export async function setMusicMood(mood) {
+  if (mood !== 'ambient' && mood !== 'suspense') return;
+
+  if (mood === 'suspense') {
+    if (currentMood === 'suspense' && isSuspensePlaying()) return;
+    stopAmbientOnly();
+    currentMood = 'suspense';
+    await startSuspenseMusic();
+    return;
+  }
+
+  // ambient
+  if (currentMood === 'ambient' && running) return;
+  stopSuspenseMusic();
+  currentMood = 'ambient';
+  await startMusic();
+}
+
+export function getMusicMood() {
+  return currentMood;
 }

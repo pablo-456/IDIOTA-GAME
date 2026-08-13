@@ -5,7 +5,7 @@
 
 const MUTE_KEY = 'idiota-audio-muted';
 const SFX_VOLUME = 0.35;
-const MUSIC_VOLUME = 0.30;
+const MUSIC_VOLUME = 1.5;
 
 let ctx = null;
 let masterGain = null;

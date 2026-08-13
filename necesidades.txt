@@ -1,7 +1,6 @@
 Mejorar:
 
--Musica de suspenso en la ultima fase-posiblemente
--Moderación básica (no permitir nombres ofensivos)
+-Agregar chat
 -UX: filtros, salas llenas, auto-refresh fiable, “partida ya empezó”
 -Límites: spam de salas, salas fantasma, listados enormes
 -Hoy: todo en RAM. Reinicio del servidor = salas muertas.
@@ -16,3 +15,5 @@ Solucionado:
 -Identidad estable entre reconexiones(hoy si se cae el socket, pierdes 
 la sesión) -> Reconexión a partida en curso,Reconexión + identidad mínima 
 (token de sesión, aunque sea guest)
+
+-Moderación básica (no permitir nombres ofensivos)

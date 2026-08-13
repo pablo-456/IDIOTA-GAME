@@ -4,6 +4,7 @@ import { useGameActions } from '../../hooks/useGameActions';
 import { useAudio } from '../../hooks/useAudio';
 import { isMusicPlaying } from '../../audio/music';
 import { PUBLIC_ROOMS_ENABLED } from '../../constants/features';
+import { getUsernameValidationError } from '../../utils/usernameModeration';
 import MuteButton from '../../components/ui/MuteButton/MuteButton';
 import './Home.css';
 
@@ -19,8 +20,9 @@ const BG_SUITS = [
 
 /* ── Notas de la versión ── */
 const PATCH_NOTES = [
-  'Beta 2.0 disponible — puede haber bichos sueltos 🐛',
-  'Se ha añadido musica y se ha mejorado la experiencia de juego.'
+  'Version Beta disponible — puede haber bichos sueltos 🐛',
+  'Se espera evaluar el juego y hacer mejoras.',
+  'Se analizara el rendimiento del servidor'
 ];
 
 export default function Home({ onGoToPublicLobbies }) {
@@ -32,6 +34,7 @@ export default function Home({ onGoToPublicLobbies }) {
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(null); // 'create' | 'join' | null
   const [slowConnect, setSlowConnect] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const musicStarted = useRef(false);
 
   // Wake-up Render + aviso si tarda
@@ -67,8 +70,9 @@ export default function Home({ onGoToPublicLobbies }) {
   }, [unlock, startMusic]);
 
   function validate(requireRoom = false) {
-    if (!username.trim()) {
-      setError('Debes ingresar un nombre de usuario.');
+    const nameError = getUsernameValidationError(username);
+    if (nameError) {
+      setError(nameError);
       return false;
     }
     if (requireRoom && !roomCode.trim()) {
@@ -116,6 +120,25 @@ export default function Home({ onGoToPublicLobbies }) {
     <div className="home">
       <MuteButton floating />
 
+      <button
+        type="button"
+        className={`home__info-toggle${sidebarOpen ? ' home__info-toggle--open' : ''}`}
+        onClick={() => setSidebarOpen((o) => !o)}
+        aria-expanded={sidebarOpen}
+        aria-controls="home-sidebar"
+      >
+        {sidebarOpen ? 'Cerrar' : 'Info'}
+      </button>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="home__sidebar-backdrop"
+          aria-label="Cerrar información"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Patrón de fondo decorativo */}
       <div className="home__bg-pattern" aria-hidden="true">
         {BG_SUITS.map(({ s, i }) => (
@@ -130,7 +153,10 @@ export default function Home({ onGoToPublicLobbies }) {
       </div>
 
       {/* ── Panel lateral izquierdo ── */}
-      <aside className="home__sidebar">
+      <aside
+        id="home-sidebar"
+        className={`home__sidebar${sidebarOpen ? ' home__sidebar--open' : ''}`}
+      >
 
         {/* Bloque de Apoyo */}
         <div className="home__side-block home__side-block--support">
@@ -174,7 +200,7 @@ export default function Home({ onGoToPublicLobbies }) {
           <div className="home__side-divider" aria-hidden="true">
             <span>♠</span><span>♥</span><span>♦</span><span>♣</span>
           </div>
-          <p className="home__side-label">Novedades · Beta 2.0</p>
+          <p className="home__side-label">Novedades · Beta</p>
           <ul className="home__patch-notes">
             {PATCH_NOTES.map((note, i) => (
               <li key={i} className="home__patch-note">
