@@ -11,8 +11,9 @@ import './Lobby.css';
  *   roomId    {string}      — Código de la sala
  *   gameState {object}      — Estado público más reciente recibido por socket
  *   myId      {string}      — socket.id del jugador local
+ *   isPublic  {boolean}     — sala visible en listado público
  */
-export default function Lobby({ roomId, gameState, myId }) {
+export default function Lobby({ roomId, gameState, myId, isPublic = false, onLeave }) {
   const { startSetup } = useGameActions();
   const { unlock, startMusic } = useAudio();
   const [copied, setCopied]   = useState(false);
@@ -58,18 +59,33 @@ export default function Lobby({ roomId, gameState, myId }) {
       <div className="lobby__bg-pattern" aria-hidden="true" />
 
       <div className="lobby__wrapper">
-        {/* ── Panel de código de sala ── */}
+        {/* ── Panel de código / tipo de sala ── */}
         <div className="lobby__code-panel">
-          <p className="lobby__code-label">Código de sala</p>
-          <div className="lobby__code-display">
-            <span className="lobby__code-text">{roomId}</span>
-            <button className="lobby__copy-btn" onClick={handleCopy} title="Copiar código">
-              {copied ? '✓' : '⧉'}
-            </button>
-          </div>
-          <p className="lobby__code-hint">
-            {copied ? '¡Copiado!' : 'Comparte este código con tus amigos'}
-          </p>
+          {isPublic ? (
+            <>
+              <p className="lobby__code-label">Tipo de sala</p>
+              <div className="lobby__public-badge" role="status">
+                Este lobby es público
+              </div>
+              <p className="lobby__code-hint">
+                Visible en el listado de salas públicas
+              </p>
+              <p className="lobby__code-secondary">Código · {roomId}</p>
+            </>
+          ) : (
+            <>
+              <p className="lobby__code-label">Código de sala</p>
+              <div className="lobby__code-display">
+                <span className="lobby__code-text">{roomId}</span>
+                <button className="lobby__copy-btn" onClick={handleCopy} title="Copiar código">
+                  {copied ? '✓' : '⧉'}
+                </button>
+              </div>
+              <p className="lobby__code-hint">
+                {copied ? '¡Copiado!' : 'Comparte este código con tus amigos'}
+              </p>
+            </>
+          )}
         </div>
 
         {/* ── Panel de jugadores ── */}
@@ -110,6 +126,9 @@ export default function Lobby({ roomId, gameState, myId }) {
                   {idx === 0 && (
                     <span className="lobby__player-role">Anfitrión</span>
                   )}
+                  {player.isConnected === false && (
+                    <span className="lobby__player-reconnect">Reconectando…</span>
+                  )}
                 </div>
                 <div className="lobby__player-status">
                   <span className="lobby__status-dot lobby__status-dot--ready" />
@@ -129,7 +148,10 @@ export default function Lobby({ roomId, gameState, myId }) {
           {/* Botón volver al inicio */}
           <button
             className="lobby__home-btn"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              if (typeof onLeave === 'function') onLeave();
+              else window.location.reload();
+            }}
           >
             ↩ Volver al inicio
           </button>

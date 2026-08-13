@@ -357,6 +357,38 @@
 
 .home__conn-badge--off .home__conn-dot { background: #c0392b; }
 
+.home__conn-badge--fail .home__conn-dot {
+  background: #e67e22;
+}
+
+.home__conn-text {
+  text-align: center;
+  line-height: 1.35;
+  max-width: 16rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 0.8rem;
+}
+
+.home__conn-retry {
+  margin-left: 0.35rem;
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.home__conn-retry:hover {
+  border-color: var(--gold);
+  background: rgba(201, 168, 76, 0.08);
+}
+
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.4; }
@@ -497,6 +529,26 @@
   transform: translateY(-1px);
 }
 
+.home__btn--public {
+  background: transparent;
+  color: var(--cream-dim);
+  border: 1px dashed rgba(201, 168, 76, 0.35);
+  box-shadow: none;
+}
+
+.home__btn--public:not(:disabled):hover {
+  background: rgba(201, 168, 76, 0.08);
+  border-color: var(--gold);
+  border-style: solid;
+  color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.home__btn--soon {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* ── Spinner ── */
 .home__spinner {
   width: 16px; height: 16px;
@@ -547,21 +599,21 @@
   font-style: italic;
 }
 
+/* ── Toggle Info (solo responsive; oculto en desktop) ── */
+.home__info-toggle {
+  display: none;
+}
+
+.home__sidebar-backdrop {
+  display: none;
+}
+
 /* ══════════════════════════════════════════════════
    RESPONSIVE
    ══════════════════════════════════════════════════ */
 
-/* Pantallas donde no hay espacio para el sidebar absoluto: lo metemos al flujo */
+/* Pantallas sin espacio para sidebar lateral: oculto + overlay con botón Info */
 @media (max-width: 1100px) {
-  .home__sidebar {
-    position: static;
-    transform: none;
-    width: 100%;
-    max-width: 480px;
-    flex-direction: row;
-    gap: 1rem;
-  }
-
   .home {
     flex-direction: column;
     align-items: center;
@@ -570,8 +622,72 @@
     padding: 2rem 1rem;
   }
 
+  .home__info-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: max(0.75rem, env(safe-area-inset-top, 0px));
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    z-index: 52;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 0.75rem;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    border-radius: 8px;
+    color: var(--gold);
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .home__info-toggle:hover,
+  .home__info-toggle--open {
+    border-color: var(--gold);
+    background: rgba(201, 168, 76, 0.15);
+  }
+
+  .home__sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.55);
+    cursor: pointer;
+  }
+
+  .home__sidebar {
+    display: none;
+    position: fixed;
+    top: max(3.5rem, calc(env(safe-area-inset-top, 0px) + 3rem));
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(100% - 2rem, 420px);
+    max-height: calc(100vh - 5rem);
+    max-height: calc(100dvh - 5rem);
+    overflow-y: auto;
+    flex-direction: column;
+    gap: 1rem;
+    z-index: 51;
+    animation: none;
+  }
+
+  .home__sidebar--open {
+    display: flex;
+  }
+
   .home__side-block {
-    flex: 1;
+    flex: none;
   }
 }
 
@@ -579,7 +695,10 @@
 @media (max-width: 560px) {
   .home__card { padding: 2.2rem 1.5rem 1.5rem; }
 
-  .home__sidebar {
-    flex-direction: column;
+  .home__info-toggle {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 0.65rem;
+    font-size: 0.72rem;
   }
 }

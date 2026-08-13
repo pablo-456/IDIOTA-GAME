@@ -9,8 +9,8 @@ import { CLIENT_EVENTS } from '../constants/socketEvents';
 export function useGameActions() {
   const { emit } = useSocket();
 
-  const createRoom = useCallback((username) => {
-    emit(CLIENT_EVENTS.CREATE_ROOM, { username });
+  const createRoom = useCallback((username, { isPublic = false } = {}) => {
+    emit(CLIENT_EVENTS.CREATE_ROOM, { username, isPublic });
   }, [emit]);
 
   const joinRoom = useCallback((username, roomId) => {
@@ -33,6 +33,18 @@ export function useGameActions() {
     emit(CLIENT_EVENTS.PICK_UP_PILE, { roomId, voluntary });
   }, [emit]);
 
+  const listPublicRooms = useCallback(() => {
+    emit(CLIENT_EVENTS.LIST_PUBLIC_ROOMS);
+  }, [emit]);
+
+  const rejoinSession = useCallback((sessionToken) => {
+    emit(CLIENT_EVENTS.REJOIN_SESSION, { sessionToken });
+  }, [emit]);
+
+  const leaveRoom = useCallback((roomId) => {
+    emit(CLIENT_EVENTS.LEAVE_ROOM, { roomId });
+  }, [emit]);
+
   return {
     createRoom,
     joinRoom,
@@ -40,5 +52,8 @@ export function useGameActions() {
     confirmSetup,
     playTurn,
     pickUpPile,
+    listPublicRooms,
+    rejoinSession,
+    leaveRoom,
   };
 }

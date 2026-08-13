@@ -3,6 +3,8 @@ import { useSocket } from '../../hooks/useSocket';
 import { useGameActions } from '../../hooks/useGameActions';
 import { useAudio } from '../../hooks/useAudio';
 import { isMusicPlaying } from '../../audio/music';
+import { PUBLIC_ROOMS_ENABLED } from '../../constants/features';
+import { getUsernameValidationError } from '../../utils/usernameModeration';
 import MuteButton from '../../components/ui/MuteButton/MuteButton';
 import './Home.css';
 
@@ -18,19 +20,36 @@ const BG_SUITS = [
 
 /* ── Notas de la versión ── */
 const PATCH_NOTES = [
-  'Beta 2.0 disponible — puede haber bichos sueltos 🐛',
-  'Se ha añadido musica y se ha mejorado la experiencia de juego.'
+  'Version Beta disponible — puede haber bichos sueltos 🐛',
+  'Se espera evaluar el juego y hacer mejoras.',
+  'Se analizara el rendimiento del servidor'
 ];
 
-export default function Home() {
-  const { connected } = useSocket();
+export default function Home({ onGoToPublicLobbies }) {
+  const { connected, connectionPhase, reconnect, wakeServer } = useSocket();
   const { createRoom, joinRoom } = useGameActions();
   const { unlock, startMusic } = useAudio();
   const [username, setUsername]   = useState('');
   const [roomCode, setRoomCode]   = useState('');
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(null); // 'create' | 'join' | null
+  const [slowConnect, setSlowConnect] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const musicStarted = useRef(false);
+
+  // Wake-up Render + aviso si tarda
+  useEffect(() => {
+    wakeServer();
+  }, [wakeServer]);
+
+  useEffect(() => {
+    if (connected) {
+      setSlowConnect(false);
+      return undefined;
+    }
+    const t = setTimeout(() => setSlowConnect(true), 4000);
+    return () => clearTimeout(t);
+  }, [connected]);
 
   // Primer gesto del usuario (autoplay): desbloquear AudioContext y arrancar musica
   useEffect(() => {
@@ -51,8 +70,9 @@ export default function Home() {
   }, [unlock, startMusic]);
 
   function validate(requireRoom = false) {
-    if (!username.trim()) {
-      setError('Debes ingresar un nombre de usuario.');
+    const nameError = getUsernameValidationError(username);
+    if (nameError) {
+      setError(nameError);
       return false;
     }
     if (requireRoom && !roomCode.trim()) {
@@ -81,9 +101,43 @@ export default function Home() {
     joinRoom(username.trim(), roomCode.trim().toUpperCase());
   }
 
+  /**
+   * Salas públicas — para habilitar:
+   * 1) PUBLIC_ROOMS_ENABLED = true en frontend/src/constants/features.js
+   * 2) PUBLIC_ROOMS_ENABLED = true en backend/src/constants/features.js
+   * 3) Reiniciar backend y refrescar frontend
+   */
+  async function handlePublicRooms() {
+    if (!PUBLIC_ROOMS_ENABLED) return;
+    if (!validate()) return;
+    await unlock();
+    await startMusic();
+    musicStarted.current = true;
+    onGoToPublicLobbies?.(username.trim());
+  }
+
   return (
     <div className="home">
       <MuteButton floating />
+
+      <button
+        type="button"
+        className={`home__info-toggle${sidebarOpen ? ' home__info-toggle--open' : ''}`}
+        onClick={() => setSidebarOpen((o) => !o)}
+        aria-expanded={sidebarOpen}
+        aria-controls="home-sidebar"
+      >
+        {sidebarOpen ? 'Cerrar' : 'Info'}
+      </button>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="home__sidebar-backdrop"
+          aria-label="Cerrar información"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* Patrón de fondo decorativo */}
       <div className="home__bg-pattern" aria-hidden="true">
@@ -99,7 +153,10 @@ export default function Home() {
       </div>
 
       {/* ── Panel lateral izquierdo ── */}
-      <aside className="home__sidebar">
+      <aside
+        id="home-sidebar"
+        className={`home__sidebar${sidebarOpen ? ' home__sidebar--open' : ''}`}
+      >
 
         {/* Bloque de Apoyo */}
         <div className="home__side-block home__side-block--support">
@@ -143,7 +200,7 @@ export default function Home() {
           <div className="home__side-divider" aria-hidden="true">
             <span>♠</span><span>♥</span><span>♦</span><span>♣</span>
           </div>
-          <p className="home__side-label">Novedades · Beta 2.0</p>
+          <p className="home__side-label">Novedades · Beta</p>
           <ul className="home__patch-notes">
             {PATCH_NOTES.map((note, i) => (
               <li key={i} className="home__patch-note">
@@ -170,9 +227,36 @@ export default function Home() {
         </header>
 
         {/* Indicador de conexión */}
-        <div className={`home__conn-badge ${connected ? 'home__conn-badge--ok' : 'home__conn-badge--off'}`}>
+        <div
+          className={`home__conn-badge ${
+            connected
+              ? 'home__conn-badge--ok'
+              : connectionPhase === 'failed'
+                ? 'home__conn-badge--fail'
+                : 'home__conn-badge--off'
+          }`}
+        >
           <span className="home__conn-dot" />
-          {connected ? 'Conectado al servidor' : 'Conectando…'}
+          <span className="home__conn-text">
+            {connected
+              ? 'Conectado al servidor'
+              : connectionPhase === 'failed'
+                ? 'No se pudo conectar'
+                : slowConnect
+                  ? 'Despertando servidor… puede tardar ~1 min'
+                  : connectionPhase === 'reconnecting'
+                    ? 'Reconectando…'
+                    : 'Conectando…'}
+          </span>
+          {!connected && (
+            <button
+              type="button"
+              className="home__conn-retry"
+              onClick={() => reconnect()}
+            >
+              Reconectar
+            </button>
+          )}
         </div>
 
         {/* Formulario */}
@@ -231,6 +315,34 @@ export default function Home() {
             >
               {loading === 'join' ? <span className="home__spinner" /> : '→'}
               <span>Unirse a Partida</span>
+            </button>
+
+            <div className="home__separator">
+              <span>o</span>
+            </div>
+
+            {/*
+              SALAS PÚBLICAS — habilitar / deshabilitar:
+              - Frontend: frontend/src/constants/features.js → PUBLIC_ROOMS_ENABLED
+              - Backend:  backend/src/constants/features.js → PUBLIC_ROOMS_ENABLED
+              (usa el mismo true/false en ambos; reinicia el backend)
+            */}
+            <button
+              className={`home__btn home__btn--public${!PUBLIC_ROOMS_ENABLED ? ' home__btn--soon' : ''}`}
+              onClick={handlePublicRooms}
+              disabled={!PUBLIC_ROOMS_ENABLED || !connected || loading !== null}
+              title={
+                PUBLIC_ROOMS_ENABLED
+                  ? 'Ver y crear salas públicas'
+                  : 'Salas públicas próximamente'
+              }
+            >
+              <span>◈</span>
+              <span>
+                {PUBLIC_ROOMS_ENABLED
+                  ? 'Salas públicas'
+                  : 'Salas públicas próximamente'}
+              </span>
             </button>
           </div>
         </div>

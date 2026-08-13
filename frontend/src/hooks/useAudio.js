@@ -6,7 +6,7 @@ import {
   toggleMute as engineToggleMute,
 } from '../audio/audioEngine';
 import { SFX } from '../audio/sfx';
-import { startMusic, stopMusic } from '../audio/music';
+import { startMusic, stopMusic, setMusicMood } from '../audio/music';
 
 /**
  * Hook de audio: mute, unlock (autoplay) y wrappers SFX/música.
@@ -38,6 +38,10 @@ export function useAudio() {
     if (typeof fn === 'function') fn();
   }, []);
 
+  const setMood = useCallback(async (mood) => {
+    await setMusicMood(mood);
+  }, []);
+
   return {
     muted,
     unlock,
@@ -46,6 +50,7 @@ export function useAudio() {
     play,
     startMusic,
     stopMusic,
+    setMusicMood: setMood,
     sfx: SFX,
   };
 }
