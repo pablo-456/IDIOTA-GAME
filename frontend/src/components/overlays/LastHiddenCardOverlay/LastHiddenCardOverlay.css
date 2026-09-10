@@ -1,0 +1,306 @@
+/* ════════════════════════════════════════════════════════
+   OVERLAY — El payaso revela la última carta oculta
+   Coreografía: recoger → espiar → suspenso → volteo → veredicto
+════════════════════════════════════════════════════════ */
+
+.last-card-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 505;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.last-card-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+  animation: lco-fade-in 0.3s ease;
+}
+
+@keyframes lco-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.last-card-overlay__stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Título — mismo lenguaje visual que special-overlay__label */
+.last-card-overlay__title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold-light), #a8d8ff, var(--gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% auto;
+  animation: lco-stage-in 0.35s ease both, lco-shimmer 1.6s linear infinite;
+}
+
+@keyframes lco-shimmer {
+  from { background-position: 0% center; }
+  to   { background-position: 200% center; }
+}
+
+.last-card-overlay__who {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  color: var(--cream-dim);
+  letter-spacing: 0.05em;
+  text-align: center;
+  animation: lco-stage-in 0.35s ease 0.05s both;
+}
+
+@keyframes lco-stage-in {
+  from { transform: translateY(-10px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+/* Escenario central: payaso + carta */
+.last-card-overlay__scene {
+  position: relative;
+  width: 220px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.last-card-overlay__spotlight {
+  position: absolute;
+  inset: -30px;
+  background: radial-gradient(circle, rgba(201, 168, 76, 0.25) 0%, rgba(201, 168, 76, 0.06) 45%, transparent 70%);
+  animation: lco-fade-in 0.5s ease 0.1s both;
+}
+
+/* El payaso */
+.last-card-overlay__clown {
+  position: absolute;
+  left: 6px;
+  bottom: 18px;
+  font-size: 3.4rem;
+  line-height: 1;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+  animation: lco-clown-good 2.6s cubic-bezier(0.34, 1.2, 0.4, 1) both;
+}
+
+.last-card-overlay__clown--bad {
+  animation-name: lco-clown-bad;
+}
+
+@keyframes lco-clown-good {
+  0%   { transform: translateY(24px) rotate(0deg)  scale(0.7); opacity: 0; }
+  11%  { transform: translateY(0)    rotate(-4deg) scale(1);   opacity: 1; }
+  25%  { transform: translateY(-6px) rotate(6deg)  scale(1.05); }
+  50%  { transform: translateY(-6px) rotate(6deg)  scale(1.05); }
+  65%  { transform: translateY(0)    rotate(-3deg) scale(1); }
+  80%  { transform: translateY(-14px) rotate(-10deg) scale(1.2); }
+  100% { transform: translateY(-2px) rotate(-6deg)  scale(1.1); }
+}
+
+@keyframes lco-clown-bad {
+  0%   { transform: translateY(24px) rotate(0deg)  scale(0.7); opacity: 0; }
+  11%  { transform: translateY(0)    rotate(-4deg) scale(1);   opacity: 1; }
+  25%  { transform: translateY(-6px) rotate(6deg)  scale(1.05); }
+  50%  { transform: translateY(-6px) rotate(6deg)  scale(1.05); }
+  65%  { transform: translateY(0)    rotate(-3deg) scale(1); }
+  80%  { transform: translateY(6px) rotate(10deg) scale(0.9); }
+  100% { transform: translateY(2px) rotate(4deg)  scale(0.95); }
+}
+
+/* Puntos suspensivos de "pensando/espiando" */
+.last-card-overlay__suspense {
+  position: absolute;
+  top: 22px;
+  left: 46px;
+  display: flex;
+  gap: 3px;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--gold-light);
+  animation: lco-suspense-window 2.6s ease both;
+}
+
+.last-card-overlay__suspense span {
+  animation: lco-dot-bounce 0.6s ease-in-out calc(var(--d) * 0.15s) infinite;
+}
+
+@keyframes lco-suspense-window {
+  0%, 24%  { opacity: 0; }
+  28%, 52% { opacity: 1; }
+  58%, 100% { opacity: 0; }
+}
+
+@keyframes lco-dot-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+/* La carta: viaje (posición) + volteo (3D) desacoplados */
+.last-card-overlay__card-wrap {
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  perspective: 700px;
+  animation: lco-card-journey 2.6s cubic-bezier(0.34, 1.15, 0.4, 1) both;
+}
+
+@keyframes lco-card-journey {
+  0%   { opacity: 0; transform: translate(30px, 40px) scale(0.4)  rotate(-14deg); }
+  11%  { opacity: 1; transform: translate(30px, 40px) scale(0.55) rotate(-14deg); }
+  25%  { transform: translate(6px, -6px) scale(0.9) rotate(-9deg); }
+  50%  { transform: translate(6px, -6px) scale(0.95) rotate(-9deg); }
+  75%  { transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+}
+
+.last-card-overlay__card-flip {
+  position: relative;
+  width: 96px;
+  height: 138px;
+  transform-style: preserve-3d;
+  animation: lco-card-flip 2.6s cubic-bezier(0.5, 0.05, 0.15, 1) both;
+}
+
+@keyframes lco-card-flip {
+  0%, 24%  { transform: rotateY(0deg) rotateZ(0deg); }
+  27%      { transform: rotateY(0deg) rotateZ(-6deg); }
+  31%      { transform: rotateY(0deg) rotateZ(6deg); }
+  35%      { transform: rotateY(0deg) rotateZ(-5deg); }
+  39%      { transform: rotateY(0deg) rotateZ(4deg); }
+  43%      { transform: rotateY(0deg) rotateZ(-3deg); }
+  48%, 74% { transform: rotateY(0deg) rotateZ(0deg); }
+  86%      { transform: rotateY(180deg) rotateZ(0deg); }
+  100%     { transform: rotateY(180deg) rotateZ(0deg); }
+}
+
+.last-card-overlay__card-face {
+  position: absolute;
+  inset: 0;
+  width: 96px !important;
+  height: 138px !important;
+  border-radius: 13px !important;
+  cursor: default !important;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.7) !important;
+}
+
+.last-card-overlay__card-face--back {
+  /* usa el diseño real de .card--facedown (patrón de rayas + borde dorado);
+     aquí solo fijamos el lado del flip */
+  transform: rotateY(0deg);
+}
+
+.last-card-overlay__card-face--back .card__back-pattern {
+  font-size: 2.4rem !important;
+}
+
+.last-card-overlay__card-face--front {
+  transform: rotateY(180deg);
+  border: 2px solid var(--gold-light) !important;
+}
+
+.last-card-overlay__card-face--front .card__value-tl { font-size: 1.15rem !important; top: 8px !important; left: 10px !important; }
+.last-card-overlay__card-face--front .card__value-br { font-size: 1.15rem !important; bottom: 8px !important; right: 10px !important; }
+.last-card-overlay__card-face--front .card__suit-center { font-size: 2.5rem !important; }
+.last-card-overlay__card-face--front .card__joker-icon { font-size: 3rem !important; }
+
+/* Chispas doradas al momento del volteo */
+.last-card-overlay__particles {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+}
+
+.last-card-overlay__particle {
+  position: absolute;
+  top: 55%; left: 62%;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--gold-light);
+  box-shadow: 0 0 6px var(--gold);
+  opacity: 0;
+  animation: lco-particle-burst 0.8s cubic-bezier(0.22, 1, 0.36, 1) calc(2.05s + var(--i) * 0.02s) both;
+}
+
+.last-card-overlay__particle:nth-child(odd) {
+  width: 4px; height: 12px;
+  border-radius: 2px;
+  background: #e8f4ff;
+  box-shadow: 0 0 6px #a8d8ff;
+}
+
+@keyframes lco-particle-burst {
+  0%   { transform: translate(-50%, -50%) rotate(calc(var(--i) * 26deg)) translateY(0)   scale(0); opacity: 1; }
+  55%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(calc(var(--i) * 26deg)) translateY(-70px) scale(1); opacity: 0; }
+}
+
+/* Veredicto */
+.last-card-overlay__verdict {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+  text-align: center;
+  padding: 0.5rem 1.4rem;
+  border-radius: 12px;
+  opacity: 0;
+  animation: lco-verdict-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 2.15s both;
+}
+
+@keyframes lco-verdict-in {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.last-card-overlay__verdict--bad {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+}
+
+.last-card-overlay__verdict--good {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  text-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+/* Barra de tiempo — arranca cuando ya se resolvió el veredicto */
+.last-card-overlay__timer {
+  width: 200px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.last-card-overlay__timer-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-dim), var(--gold-light));
+  border-radius: 2px;
+  transform-origin: left;
+  animation: lco-timer-drain 3s linear 2.3s forwards;
+  width: 100%;
+  transform: scaleX(0);
+}
+
+@keyframes lco-timer-drain {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}

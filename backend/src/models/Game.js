@@ -508,14 +508,17 @@ class Game {
             card:     cardsToPlay[0],
           };
 
+          const isLastHiddenCard = player.cartasOcultas.length === 0;
+
           // Retornamos la carta revelada para que el servidor la emita a la sala
           return {
-            success:      true,
-            burned:       false,
-            extraTurn:    false,
-            won:          false,
-            forcedPickUp: true,
-            revealedCard: cardsToPlay[0],
+            success:           true,
+            burned:            false,
+            extraTurn:         false,
+            won:               false,
+            forcedPickUp:      true,
+            revealedCard:      cardsToPlay[0],
+            isLastHiddenCard,
           };
         }
 
@@ -559,7 +562,19 @@ class Game {
 
     // Comprobar si el jugador se salvó (se quedó sin cartas)
     const { saved, gameOver } = this.checkSaved(playerId);
-    if (saved) return { success: true, burned, extraTurn: false, saved: true, gameOver };
+    if (saved) {
+      // Última oculta buena que salva → revelar antes de sincronizar “salvado”
+      const revealedCard = (zone === 'cartasOcultas') ? cardsToPlay[0] : null;
+      return {
+        success: true,
+        burned,
+        extraTurn: false,
+        saved: true,
+        gameOver,
+        revealedCard,
+        isLastHiddenCard: Boolean(revealedCard),
+      };
+    }
 
     // Avanzar turno si no hay turno extra
     if (!extraTurn) {
@@ -568,11 +583,22 @@ class Game {
 
     // Carta oculta buena → revelar a todos
     const revealedCard = (zone === 'cartasOcultas') ? cardsToPlay[0] : null;
+    const isLastHiddenCard = zone === 'cartasOcultas' && player.cartasOcultas.length === 0;
 
     // isBurn ya indica si es 8 o Joker; reutilizamos esa variable (playValue ya está declarada arriba)
     const isSpecialPlay = isBurn && zone !== 'cartasOcultas';
 
-    return { success: true, burned, extraTurn, saved: false, gameOver: false, revealedCard, isSpecialPlay, specialCard: isSpecialPlay ? cardsToPlay[0] : null };
+    return {
+      success: true,
+      burned,
+      extraTurn,
+      saved: false,
+      gameOver: false,
+      revealedCard,
+      isLastHiddenCard,
+      isSpecialPlay,
+      specialCard: isSpecialPlay ? cardsToPlay[0] : null,
+    };
   }
 
   /**

@@ -9,6 +9,7 @@ import MyVisiblesPanel from '../../components/game/MyVisiblesPanel/MyVisiblesPan
 import SpecialPlayOverlay from '../../components/overlays/SpecialPlayOverlay/SpecialPlayOverlay';
 import CrownOverlay from '../../components/overlays/CrownOverlay/CrownOverlay';
 import CardRevealOverlay from '../../components/overlays/CardRevealOverlay/CardRevealOverlay';
+import LastHiddenCardOverlay from '../../components/overlays/LastHiddenCardOverlay/LastHiddenCardOverlay';
 import StartRouletteOverlay from '../../components/overlays/StartRouletteOverlay/StartRouletteOverlay';
 import './Game.css';
 
@@ -23,7 +24,7 @@ export default function Game({ gameState, myId, roomId, firstPlayer = null, onFi
   const savedPlayers = gameState?.savedPlayers ?? [];
   const amISaved = gameState?.players?.find((p) => p.id === myId)?.isSaved ?? false;
 
-  const { savedNotif, revealEvent, specialEvent, gameOverData } = useGameEvents();
+  const { savedNotif, revealEvent, lastHiddenCardEvent, specialEvent, gameOverData } = useGameEvents();
   const { confirmSetup, playTurn, pickUpPile } = useGameActions();
   const { muted, toggleMute, unlock, play, startMusic } = useAudio();
 
@@ -103,6 +104,7 @@ export default function Game({ gameState, myId, roomId, firstPlayer = null, onFi
         myId={myId}
         onDone={handleRouletteDone}
       />
+      <LastHiddenCardOverlay event={lastHiddenCardEvent} myId={myId} />
       <CardRevealOverlay event={revealEvent} myId={myId} />
       <SpecialPlayOverlay event={specialEvent} myId={myId} />
       <CrownOverlay

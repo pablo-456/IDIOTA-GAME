@@ -13,6 +13,7 @@ export function useGameEvents() {
 
   const [savedNotif, setSavedNotif] = useState(false);
   const [revealEvent, setRevealEvent] = useState(null);
+  const [lastHiddenCardEvent, setLastHiddenCardEvent] = useState(null);
   const [specialEvent, setSpecialEvent] = useState(null);
   const [gameOverData, setGameOverData] = useState(null);
 
@@ -27,7 +28,15 @@ export function useGameEvents() {
     });
 
     const offReveal = on(SERVER_EVENTS.CARD_REVEALED, (data) => {
-      const { card, mustPickUp } = data;
+      const { card, mustPickUp, isLastHiddenCard } = data;
+      if (isLastHiddenCard) {
+        SFX.reveal();
+        setLastHiddenCardEvent(data);
+        const t = setTimeout(() => setLastHiddenCardEvent(null), 5500);
+        timeouts.push(t);
+        return;
+      }
+
       const isSpecial = isBurnCard(card.value);
       if (!mustPickUp && isSpecial) return;
       SFX.reveal();
@@ -60,6 +69,7 @@ export function useGameEvents() {
   return {
     savedNotif,
     revealEvent,
+    lastHiddenCardEvent,
     specialEvent,
     gameOverData,
   };

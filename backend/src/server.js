@@ -362,69 +362,86 @@ io.on('connection', (socket) => {
     // ── Carta oculta mala → revelar, esperar 3 s, luego pickup ──
     if (result.forcedPickUp) {
       const revealer = game.players.find((p) => p.id === socket.id);
+      const revealPayload = {
+        playerId:        socket.id,
+        playerName:      revealer?.username ?? 'Alguien',
+        card:            result.revealedCard,
+        pileTopPower:    game.pileTopPower,
+        mustPickUp:      true,
+        isLastHiddenCard: Boolean(result.isLastHiddenCard),
+      };
 
-      // Sincronizar estado intermedio (carta visible en pila, aún no recogida)
-      for (const player of game.players) {
-        io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
-      }
+      // Mostrar la animación antes de que el estado del juego cambie por la recogida.
+      io.to(roomId).emit('card_revealed', revealPayload);
 
-      // Anunciar el reveal dramático a toda la sala
-      io.to(roomId).emit('card_revealed', {
-        playerId:     socket.id,
-        playerName:   revealer?.username ?? 'Alguien',
-        card:         result.revealedCard,
-        pileTopPower: game.pileTopPower,
-        mustPickUp:   true,
-      });
+      const overlayDelayMs = result.isLastHiddenCard ? 5000 : 3000;
 
-      // Tras 3 s confirmar el pickup y re-sincronizar
       setTimeout(() => {
         const pickResult = game.confirmForcedPickUp();
         if (!pickResult.success) return;
         for (const player of game.players) {
           io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
         }
-      }, 3000);
+      }, overlayDelayMs);
 
       return;
     }
 
     // ── El jugador se salvó (se quedó sin cartas) ──
     if (result.saved) {
-      // Notificar solo al jugador salvado con su mensaje especial
-      socket.emit('player_saved', {
-        message:      '🎉 ¡Te salvaste! Ya no tienes cartas.',
-        savedPlayers: game.savedPlayers,
-      });
+      const emitSavedAndSync = () => {
+        // Notificar solo al jugador salvado con su mensaje especial
+        socket.emit('player_saved', {
+          message:      '🎉 ¡Te salvaste! Ya no tienes cartas.',
+          savedPlayers: game.savedPlayers,
+        });
 
-      // ¿La partida terminó? (queda 1 solo con cartas → el idiota)
-      if (result.gameOver) {
-        const loser = game.players.find((p) => p.id === game.loserId);
+        // ¿La partida terminó? (queda 1 solo con cartas → el idiota)
+        if (result.gameOver) {
+          const loser = game.players.find((p) => p.id === game.loserId);
 
-        // Primero sincronizar estado (con loserId y savedPlayers actualizados)
-        // para que los clientes lo tengan ANTES de recibir game_over
-        for (const player of game.players) {
-          io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
+          // Primero sincronizar estado (con loserId y savedPlayers actualizados)
+          // para que los clientes lo tengan ANTES de recibir game_over
+          for (const player of game.players) {
+            io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
+          }
+
+          io.to(roomId).emit('game_over', {
+            loserId:      game.loserId,
+            loserName:    loser?.username ?? 'Desconocido',
+            savedPlayers: game.savedPlayers,
+            reason:       'El último jugador con cartas es el idiota.',
+          });
+          roomController.clearSessionsForRoom(roomId);
+          return;
         }
 
-        io.to(roomId).emit('game_over', {
-          loserId:      game.loserId,
-          loserName:    loser?.username ?? 'Desconocido',
-          savedPlayers: game.savedPlayers,
-          reason:       'El último jugador con cartas es el idiota.',
+        // La partida continúa — enviar estado actualizado a todos
+        // (el turno ya fue avanzado por checkSaved → nextTurn)
+        for (const player of game.players) {
+          io.to(player.id).emit('game_started', {
+            state:        game.toPrivateState(player.id),
+            savedPlayers: game.savedPlayers,
+          });
+        }
+      };
+
+      // Última oculta buena → overlay dramático antes de marcar “salvado”
+      if (result.isLastHiddenCard && result.revealedCard) {
+        const revealer = game.players.find((p) => p.id === socket.id);
+        io.to(roomId).emit('card_revealed', {
+          playerId:         socket.id,
+          playerName:       revealer?.username ?? 'Alguien',
+          card:             result.revealedCard,
+          pileTopPower:     game.pileTopPower,
+          mustPickUp:       false,
+          isLastHiddenCard: true,
         });
-        roomController.clearSessionsForRoom(roomId);
+        setTimeout(emitSavedAndSync, 5000);
         return;
       }
 
-      // La partida continúa — enviar estado actualizado a todos
-      // (el turno ya fue avanzado por checkSaved → nextTurn)
-      for (const player of game.players) {
-        io.to(player.id).emit('game_started', {
-          state:        game.toPrivateState(player.id),
-          savedPlayers: game.savedPlayers,
-        });
-      }
+      emitSavedAndSync();
       return;
     }
 
@@ -437,14 +454,16 @@ io.on('connection', (socket) => {
       const isSpecialFromAzar = rc.value === '8' || rc.value === '🃏' || rc.value === 'JOKER';
 
       io.to(roomId).emit('card_revealed', {
-        playerId:    socket.id,
-        playerName:  actor?.username ?? 'Alguien',
-        card:        rc,
-        mustPickUp:  false,
+        playerId:         socket.id,
+        playerName:       actor?.username ?? 'Alguien',
+        card:             rc,
+        mustPickUp:       false,
+        isLastHiddenCard: Boolean(result.isLastHiddenCard),
       });
 
       // Si además era 8 o Joker, emitir también la animación dorada
-      if (isSpecialFromAzar) {
+      // (salvo última oculta: el overlay dramático tiene prioridad)
+      if (isSpecialFromAzar && !result.isLastHiddenCard) {
         io.to(roomId).emit('special_play', {
           playerId:   socket.id,
           playerName: actor?.username ?? 'Alguien',
@@ -464,9 +483,19 @@ io.on('connection', (socket) => {
       });
     }
 
-    for (const player of game.players) {
-      io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
+    const syncGameState = () => {
+      for (const player of game.players) {
+        io.to(player.id).emit('game_started', { state: game.toPrivateState(player.id) });
+      }
+    };
+
+    // Última oculta buena (no salvó) → dejar correr el overlay antes del sync
+    if (result.isLastHiddenCard) {
+      setTimeout(syncGameState, 5000);
+      return;
     }
+
+    syncGameState();
   });
 
   // ─────────────────────────────────────────────────────────────────────────
