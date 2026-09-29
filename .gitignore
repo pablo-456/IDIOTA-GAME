@@ -6,6 +6,9 @@ frontend/node_modules/
 #necesidades.txt
 necesidades.txt
 
+#comandos.txt
+comandos.txt
+
 # Entornos de desarrollo y empaquetadores (Vite / Node)
 .env
 .env.local

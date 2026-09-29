@@ -25,7 +25,7 @@ const PATCH_NOTES = [
   'Se analizara el rendimiento del servidor'
 ];
 
-export default function Home({ onGoToPublicLobbies }) {
+export default function Home({ onGoToPublicLobbies, onGoToBlog }) {
   const { connected, connectionPhase, reconnect, wakeServer } = useSocket();
   const { createRoom, joinRoom } = useGameActions();
   const { unlock, startMusic } = useAudio();
@@ -184,15 +184,13 @@ export default function Home({ onGoToPublicLobbies }) {
           <p className="home__side-desc">
             Conoce del juego y sus reglas.
           </p>
-          <a
+          <button
             className="home__support-btn"
-            href={'https://docs.google.com/document/d/17jkYqr8xAS2iin8TPk_kVCC4iPQ9Tj5n-eNZtMY-XUs/edit?tab=t.0#heading=h.sg9oh4jk6rum'}
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={onGoToBlog}
           >
             <span className="home__support-icon">📚</span>
             <span>Conocer más</span>
-          </a>
+          </button>
         </div>
 
         {/* Bloque de Novedades */}

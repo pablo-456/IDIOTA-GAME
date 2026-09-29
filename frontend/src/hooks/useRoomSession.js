@@ -179,6 +179,10 @@ export function useRoomSession() {
     setScreen('PUBLIC_LOBBIES');
   }, []);
 
+  const goToBlog = useCallback(() => {
+    setScreen('BLOG');
+  }, []);
+
   return {
     screen,
     roomId,
@@ -189,6 +193,7 @@ export function useRoomSession() {
     pendingUsername,
     goHome,
     goToPublicLobbies,
+    goToBlog,
     clearFirstPlayer: () => setFirstPlayer(null),
     clearServerError: () => setServerError(null),
   };

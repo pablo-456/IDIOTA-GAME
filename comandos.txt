@@ -1,6 +1,0 @@
-frontend: npm run dev
-backend: node src/server.js
-
-Las URLS en:
- -backend->src->Server.js linea 56 en (const io)
- -frontend->hooks->useSocket.js linea 14

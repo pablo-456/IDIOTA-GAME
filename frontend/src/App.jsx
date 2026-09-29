@@ -9,6 +9,7 @@ import Home from './pages/Home/Home';
 import PublicLobbies from './pages/PublicLobbies/PublicLobbies';
 import Lobby from './pages/Lobby/Lobby';
 import Game from './pages/Game/Game';
+import Blog from './pages/Blog/Blog';
 import './App.css';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
     pendingUsername,
     goHome,
     goToPublicLobbies,
+    goToBlog,
   } = useRoomSession();
 
   const { connected, reconnect } = useSocket();
@@ -47,7 +49,10 @@ export default function App() {
 
       <div className="app__screen" key={screen}>
         {screen === 'HOME' && (
-          <Home onGoToPublicLobbies={goToPublicLobbies} />
+          <Home onGoToPublicLobbies={goToPublicLobbies} onGoToBlog={goToBlog} />
+        )}
+        {screen === 'BLOG' && (
+          <Blog onBack={goHome} />
         )}
         {screen === 'PUBLIC_LOBBIES' && (
           <PublicLobbies

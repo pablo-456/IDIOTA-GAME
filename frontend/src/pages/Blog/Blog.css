@@ -1,0 +1,195 @@
+/* ═══════════════════════════════════════════════════════
+   Blog.css — Página de información · Estética Art Deco Casino
+   ═══════════════════════════════════════════════════════ */
+
+.blog {
+  --felt:         #0d1f0f;
+  --felt-mid:     #122818;
+  --felt-light:   #1a3820;
+  --ink:          #080f09;
+  --cream:        #f5ead8;
+  --cream-dim:    #b8a98a;
+  --gold:         #c9a84c;
+  --gold-light:    #e8d48b;
+  --gold-dim:     #8a7a4a;
+  --red-suit:     #c0392b;
+  --font-body:    'Crimson Pro', Georgia, serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --radius-card:  16px;
+  --radius-btn:   10px;
+  --shadow-deep:  0 20px 60px rgba(0,0,0,0.5);
+  --shadow-gold:  0 0 40px rgba(201,168,76,0.08);
+
+  min-height: 100vh;
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(ellipse 80% 70% at 50% 40%, var(--felt) 0%, var(--ink) 100%);
+  font-family: var(--font-body);
+  color: var(--cream);
+  padding: 2rem 1rem 4rem;
+  position: relative;
+}
+
+/* ── Botón volver ── */
+.blog__back {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top, 0px));
+  left: max(0.75rem, env(safe-area-inset-left, 0px));
+  z-index: 50;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  border-radius: 8px;
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.blog__back:hover {
+  border-color: var(--gold);
+  background: rgba(201, 168, 76, 0.15);
+}
+
+/* ── Header ── */
+.blog__header {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 3rem;
+  padding-top: 2rem;
+}
+
+.blog__crown {
+  font-size: 2.4rem;
+  color: var(--gold);
+  line-height: 1;
+  display: block;
+  margin-bottom: 0.5rem;
+  animation: blog-crown-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes blog-crown-glow {
+  from { text-shadow: 0 0 8px rgba(201,168,76,0.3); }
+  to   { text-shadow: 0 0 24px rgba(201,168,76,0.9), 0 0 40px rgba(201,168,76,0.4); }
+}
+
+.blog__title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6vw, 4rem);
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: var(--gold-light);
+  margin: 0;
+  line-height: 1;
+  text-shadow:
+    0 2px 4px rgba(0,0,0,0.5),
+    0 0 60px rgba(201,168,76,0.2);
+}
+
+.blog__tagline {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--cream-dim);
+  margin: 0.75rem 0 1.25rem;
+  letter-spacing: 0.03em;
+}
+
+.blog__divider {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  color: var(--gold-dim);
+  font-size: 1.1rem;
+}
+
+.blog__divider span:nth-child(2),
+.blog__divider span:nth-child(4) { color: var(--red-suit); }
+
+/* ── Contenido ── */
+.blog__content {
+  max-width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* ── Secciones ── */
+.blog__section {
+  background: linear-gradient(160deg, var(--felt-mid) 0%, var(--felt) 100%);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius-card);
+  padding: 1.75rem 1.5rem;
+  box-shadow:
+    var(--shadow-deep),
+    inset 0 1px 0 rgba(201,168,76,0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.blog__section::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  border-radius: 2px;
+}
+
+.blog__section-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--gold-light);
+  margin: 0 0 1rem;
+  letter-spacing: 0.04em;
+}
+
+/* ── Placeholder ── */
+.blog__placeholder {
+  color: var(--cream-dim);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-style: italic;
+  border: 1px dashed rgba(201, 168, 76, 0.25);
+  border-radius: 8px;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.blog__placeholder p {
+  margin: 0;
+}
+
+/* ── Footer ── */
+.blog__footer {
+  text-align: center;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(201, 168, 76, 0.1);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: #97b899;
+  font-style: italic;
+}
+
+/* ── Responsive ── */
+@media (max-width: 560px) {
+  .blog {
+    padding: 1rem 0.75rem 3rem;
+  }
+
+  .blog__header {
+    padding-top: 3rem;
+  }
+
+  .blog__section {
+    padding: 1.25rem 1rem;
+  }
+}
