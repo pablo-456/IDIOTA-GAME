@@ -1,6 +1,3 @@
-EL JUEGO YA VIVE, encuentralo en: https://idiota-game.vercel.app
-
-
 # 🃏 IDIOTA - Juego de Cartas Multijugador Online
 
 ¡Bienvenido a **IDIOTA**! Un juego de cartas multijugador online en tiempo real diseñado con una estética premium de casino oscuro y dorado. El proyecto está construido con una arquitectura moderna utilizando comunicación bidireccional por WebSockets para una sincronización instantánea entre jugadores.
@@ -53,7 +50,8 @@ El proyecto se divide en una estructura limpia de dos carpetas principales (Mono
 
 Para levantar el proyecto en tu máquina local, sigue estos pasos:
 
-### 1. Clonar el repositorio e instalar dependencias
+1. Clonar el repositorio e instalar dependencias
+
 cd idiota-game
 
 2. Configurar y encender el Backend
