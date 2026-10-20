@@ -1,0 +1,84 @@
+---
+description: "Mantén docs/memory.md actualizado cuando cambien la arquitectura, reglas, eventos, configuración, comandos o comportamiento del proyecto IDIOTA."
+alwaysApply: true
+---
+
+# Mantenimiento de `docs/memory.md`
+
+## Propósito
+
+`docs/memory.md` es la referencia técnica consolidada y vigente del proyecto.
+Debe describir el comportamiento real del repositorio, no sustituir el código ni
+copiar íntegramente otros documentos.
+
+## Cuándo actualizar
+
+Al implementar un cambio, revisa si afecta a la documentación. Actualiza
+`docs/memory.md` en la misma tarea cuando cambie alguno de estos aspectos:
+
+- Arquitectura, responsabilidades de módulos o estructura relevante.
+- Reglas del juego, fases, límites, flujo de salas o gestión de sesiones.
+- Eventos Socket.IO, payloads, validaciones o estados visibles al cliente.
+- Variables de entorno, feature flags, comandos, dependencias o despliegue.
+- Seguridad, privacidad del estado, persistencia o limitaciones conocidas.
+- Trabajo futuro documentado que ahora se haya implementado, descartado o
+  modificado.
+
+No lo cambies por modificaciones puramente internas que no alteren el
+comportamiento, la configuración ni la manera de mantener el sistema.
+
+## Flujo de mantenimiento
+
+1. Identifica qué cambió y qué secciones de `memory.md` dependen de ello.
+2. Verifica el comportamiento en la implementación actual; usa como fuentes
+   primarias el código, `package.json` y la configuración vigente.
+3. Actualiza solo las secciones afectadas, manteniendo las demás intactas.
+4. Si una regla anterior quedó obsoleta, reemplázala en vez de añadir una
+   segunda descripción contradictoria.
+5. Comprueba que rutas, eventos, cifras, comandos y valores coincidan con el
+   repositorio. Indica expresamente las limitaciones que no puedan verificarse.
+6. Incluye el cambio de documentación en la misma entrega y menciona en el
+   resumen si `memory.md` se actualizó o no; si no se actualizó, explica por qué.
+
+## Estructura del documento
+
+Conserva estas secciones como índice base y reorganízalas solo si mejora la
+claridad:
+
+1. Resumen.
+2. Arquitectura y estructura.
+3. Tecnologías y comandos.
+4. Configuración y despliegue.
+5. Reglas y ciclo de juego.
+6. Salas, estados y sesiones.
+7. Contrato de eventos Socket.IO.
+8. Seguridad, validación y experiencia.
+9. Pendientes conocidos.
+10. Documentación relacionada.
+
+Añade una sección únicamente cuando cubra información necesaria que no encaje
+en las existentes. Mantén los detalles técnicos en su nivel práctico: qué hace
+cada parte, dónde encontrarla y qué debe tener en cuenta quien la modifica.
+
+## Fuentes y precisión
+
+- El código actual es la fuente de verdad para el comportamiento implementado.
+- Los archivos de configuración y manifiestos son la fuente de verdad para
+  scripts, dependencias, flags y variables.
+- `README.md`, `necesidades.txt`, las reglas de `.cursor/` y los documentos
+  `.docx` sirven como contexto; pueden estar desactualizados.
+- Distingue explícitamente entre funcionalidad activa, desactivada por flag,
+  planificada y documentada históricamente.
+- No inventes valores ni presentes una intención del README como funcionalidad
+  implementada si el código no la confirma.
+
+## Estilo
+
+- Escribe en español, con títulos descriptivos y listas o tablas cuando ayuden
+  a consultar rápidamente.
+- Usa rutas del repositorio y nombres exactos de eventos, símbolos y variables.
+- Evita duplicar el contenido de `README.md` o las especificaciones históricas;
+  resume y enlaza las referencias pertinentes.
+- Sé conciso, pero incluye los pasos necesarios para ejecutar o configurar el
+  proyecto sin depender de información implícita.
+- No agregues fechas o números de versión sin una fuente verificable.
